@@ -265,3 +265,97 @@ export async function askRelationType(): Promise<RelationConfig | null> {
   // Para otros tipos, no necesitan multiplicidad personalizada
   return { type };
 }
+
+/**
+ * Pregunta al usuario qué hacer cuando ya existe una relación entre las mismas dos tablas.
+ * Se muestra JUSTO al juntar los puntos, antes de elegir tipo/cardinalidad.
+ * @returns "replace" para reemplazar la existente, "create" para crear otra aparte, null para cancelar
+ */
+export async function askExistingRelation(
+  sourceName: string,
+  targetName: string
+): Promise<"replace" | "create" | null> {
+  const { value } = await Swal.fire({
+    title: "Ya existe una relación",
+    html: `
+      <style>
+        .exists-msg {
+          font-size: 14px;
+          color: #e0e0e0;
+          margin-bottom: 16px;
+          text-align: left;
+          line-height: 1.5;
+        }
+        .exists-cards {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .exists-card {
+          background: #2a2a2a;
+          border: 2px solid #444;
+          border-radius: 8px;
+          padding: 14px 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-align: left;
+        }
+        .exists-card:hover {
+          border-color: #0984e3;
+          background: #333;
+        }
+        .exists-card-title {
+          font-size: 15px;
+          font-weight: 600;
+          color: #fff;
+          margin-bottom: 3px;
+        }
+        .exists-card-desc {
+          font-size: 12px;
+          color: #aaa;
+        }
+        .exists-card.replace .exists-card-title { color: #ff7675; }
+        .exists-card.create .exists-card-title { color: #55efc4; }
+      </style>
+      <div class="exists-msg">
+        Entre <strong>"${sourceName}"</strong> y <strong>"${targetName}"</strong> ya existe una relación.
+      </div>
+      <div class="exists-cards">
+        <div class="exists-card replace" data-value="replace">
+          <div class="exists-card-title">🔄 Reemplazar la existente</div>
+          <div class="exists-card-desc">Elimina la relación actual y crea la nueva en su lugar.</div>
+        </div>
+        <div class="exists-card create" data-value="create">
+          <div class="exists-card-title">➕ Crear otra relación aparte</div>
+          <div class="exists-card-desc">Mantiene la actual y añade otra FK (varias relaciones entre las mismas tablas).</div>
+        </div>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCancelButton: true,
+    cancelButtonText: "Cancelar",
+    cancelButtonColor: "#636e72",
+    background: "#1e1e1e",
+    color: "#fff",
+    width: '460px',
+    customClass: {
+      popup: "swal-dark-popup",
+      cancelButton: "swal-cancel-btn",
+      htmlContainer: "swal-html-dark",
+    },
+    didOpen: () => {
+      const cards = document.querySelectorAll('.exists-card');
+      cards.forEach((card) => {
+        card.addEventListener('click', () => {
+          const value = (card as HTMLElement).getAttribute('data-value');
+          Swal.clickConfirm();
+          (Swal as any).selectedValue = value;
+        });
+      });
+    },
+    preConfirm: () => (Swal as any).selectedValue
+  });
+
+  if (!value) return null;
+  return value as "replace" | "create";
+}

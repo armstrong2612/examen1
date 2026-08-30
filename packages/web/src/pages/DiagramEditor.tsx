@@ -56,6 +56,7 @@ export default function DiagramEditor() {
 
   const isViewer = userRole === "VIEWER";
   const isGuest = user?.id?.startsWith("guest_");
+  const readOnly = isViewer || isGuest;
   const inviteToken = searchParams.get("fromInvite");
 
   // Obtener socket desde el manager (solo se crea si hay usuario)
@@ -88,6 +89,23 @@ export default function DiagramEditor() {
     if (!user) {
       console.error("🚨 Sin usuario, redirigiendo");
       navigate("/");
+      return;
+    }
+
+    // 🆕 Inivtados (usuarios sin sesión): no buscar proyectos por userId,
+    // mantenerlos en el diagrama como solo lectura.
+    if (isGuest) {
+      if (!project || project.id !== projectId) {
+        // Si vino por un link de invitación, volver a la bandeja de invitación
+        if (inviteToken) {
+          navigate(`/invite/${inviteToken}`);
+          return;
+        }
+        console.warn("👤 [Editor] Invitado sin proyecto en store");
+        navigate("/dashboard");
+        return;
+      }
+      setUserRole("VIEWER");
       return;
     }
 
@@ -124,7 +142,7 @@ export default function DiagramEditor() {
           console.error("❌ Error verificando rol:", err);
         });
     }
-  }, [projectId, user, project, navigate, setProject]);
+  }, [projectId, user, project, navigate, setProject, isGuest, inviteToken]);
 
   // 🔄 Cargar diagrama inicial desde BD
   useEffect(() => {
@@ -462,6 +480,8 @@ export default function DiagramEditor() {
 
   // 📝 Manejar actualización de nodo desde PropertiesPanel
   const handleNodeUpdate = useCallback((nodeId: string, updatedData: any) => {
+    if (readOnly) return;
+
     setNodes((nds: Node[]) =>
       nds.map((n: Node) =>
         n.id === nodeId 
@@ -479,12 +499,12 @@ export default function DiagramEditor() {
         data: updatedData 
       },
     });
-  }, [project, setNodes, socket]);
+  }, [project, setNodes, socket, readOnly]);
 
   // 🎯 Detectar cuando se suelta un nodo (al final del drag)
   const onNodeDragStop = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      if (userRole === "VIEWER") return;
+      if (readOnly) return;
 
       setNodes((nds: Node[]) =>
         nds.map((n: Node) =>
@@ -538,6 +558,70 @@ export default function DiagramEditor() {
         return;
       }
 
+      const sourceNode = nodes.find(n => n.id === connection.source);
+      const targetNode = nodes.find(n => n.id === connection.target);
+      
+      if (!sourceNode || !targetNode) {
+        console.error("❌ Nodos no encontrados");
+        return;
+      }
+
+      // ⚠️ Verificar si ya existe una relación entre este par de nodos
+      // (en cualquiera de las dos direcciones). Se muestra JUSTO al juntar los
+      // puntos, ANTES de elegir tipo/cardinalidad.
+      const existingEdgesBetween = edges.filter(e => {
+        const src = nodes.find(n => n.id === e.source);
+        const tgt = nodes.find(n => n.id === e.target);
+        if (!src || !tgt) return false;
+        return (
+          (src.id === sourceNode.id && tgt.id === targetNode.id) ||
+          (src.id === targetNode.id && tgt.id === sourceNode.id)
+        );
+      });
+
+      if (existingEdgesBetween.length > 0) {
+        const { askExistingRelation } = await import("../utils/relationPrompt");
+        const choice = await askExistingRelation(
+          sourceNode.data.name || sourceNode.data.label,
+          targetNode.data.name || targetNode.data.label
+        );
+
+        // null = cancelar (no hacer nada)
+        if (choice === null) return;
+
+        if (choice === "replace") {
+          // 🔄 Eliminar todas las relaciones previas entre el par:
+          //    1) quitar campos FK asociados de los nodos
+          //    2) quitar los edges del estado
+          //    3) emitir DELETE_EDGE por cada edge
+          existingEdgesBetween.forEach(oldEdge => {
+            removeFKFieldsFromEdge(oldEdge, nodes, setNodes);
+          });
+
+          // Limpiar edges del estado (eliminar cualquier edge entre el par)
+          const srcId = sourceNode.id;
+          const tgtId = targetNode.id;
+          setEdges((prev: Edge[]) => prev.filter(e =>
+            !(
+              (e.source === srcId && e.target === tgtId) ||
+              (e.source === tgtId && e.target === srcId)
+            )
+          ));
+
+          // Emitir eliminación de edges previos
+          existingEdgesBetween.forEach(oldEdge => {
+            socket.emit("diagram-change", {
+              projectId: project.id,
+              action: "DELETE_EDGE",
+              payload: { id: oldEdge.id },
+            });
+          });
+
+          // Esperar a que la limpieza se aplique antes de crear la nueva
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
       // Importar dinámicamente la función de modal
       const { askRelationType } = await import("../utils/relationPrompt");
       const relationConfig = await askRelationType();
@@ -546,14 +630,6 @@ export default function DiagramEditor() {
 
       const relationType = relationConfig.type;
       const multiplicity = relationConfig.multiplicity;
-      
-      const sourceNode = nodes.find(n => n.id === connection.source);
-      const targetNode = nodes.find(n => n.id === connection.target);
-      
-      if (!sourceNode || !targetNode) {
-        console.error("❌ Nodos no encontrados");
-        return;
-      }
 
       // 🔷 N-N: Crea tabla intermedia automáticamente (para BD y ASOCIACIÓN UML)
       if (relationType === "N-N" || (relationType === "ASSOCIATION" && multiplicity === "N-N")) {
@@ -2409,12 +2485,12 @@ export default function DiagramEditor() {
             edgeTypes={edgeTypes}
             nodes={nodes}
             edges={edges}
-            onNodesChange={isViewer ? undefined : handleNodesChange}
-            onEdgesChange={isViewer ? undefined : onEdgesChange}
-            onConnect={isViewer ? undefined : handleConnect}
-            onNodeDragStop={isViewer ? undefined : onNodeDragStop}
-            onNodeContextMenu={isViewer ? undefined : onNodeContextMenu}
-            onEdgeContextMenu={isViewer ? undefined : onEdgeContextMenu}
+            onNodesChange={readOnly ? undefined : handleNodesChange}
+            onEdgesChange={readOnly ? undefined : onEdgesChange}
+            onConnect={readOnly ? undefined : handleConnect}
+            onNodeDragStop={readOnly ? undefined : onNodeDragStop}
+            onNodeContextMenu={readOnly ? undefined : onNodeContextMenu}
+            onEdgeContextMenu={readOnly ? undefined : onEdgeContextMenu}
             onEdgeClick={(_, edge) => setSelectedEdge(edge)}
             onPaneClick={() => {
               setSelectedNode(null);
@@ -2422,9 +2498,9 @@ export default function DiagramEditor() {
             }}
             panOnDrag={true}
             zoomOnScroll={true}
-            nodesDraggable={!isViewer}
-            nodesConnectable={!isViewer}
-            elementsSelectable={!isViewer}
+            nodesDraggable={!readOnly}
+            nodesConnectable={!readOnly}
+            elementsSelectable={!readOnly}
             fitView
             attributionPosition="bottom-left"
           >
@@ -2453,6 +2529,7 @@ export default function DiagramEditor() {
           onUpdate={handleNodeUpdate}
           socket={socket}
           project={project}
+          readOnly={readOnly}
         />
       </div>
 

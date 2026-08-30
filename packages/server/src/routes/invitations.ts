@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
+import { ensureUserExists } from "../utils/ensureUserExists.js";
 
 const prisma = new PrismaClient();
 const router = Router();
@@ -24,7 +25,7 @@ router.post("/create", async (req, res) => {
       },
     });
 
-    const url = `http://localhost:3001/invite/${token}`;
+    const url = `${process.env.APP_URL || "http://localhost:3001"}/invite/${token}`;
     console.log(`✉️ [invitations] Created universal invitation for project ${projectId}`);
     
     res.json({ url, token, invitation });
@@ -72,6 +73,9 @@ router.post("/accept", async (req, res) => {
     if (!invitation) {
       return res.status(404).json({ error: "Invitation not found" });
     }
+
+    // Garantizar que el usuario exista en la BD antes de enlazarlo al proyecto
+    await ensureUserExists(userId);
 
     // Agregar usuario al proyecto (o actualizar rol si ya existe)
     await prisma.projectUser.upsert({

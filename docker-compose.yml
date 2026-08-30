@@ -24,6 +24,7 @@ services:
       PORT: ${PORT:-3001}
       DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-diagram_editor}?schema=public"
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3001}
     ports:
       - "3001:3001"
 

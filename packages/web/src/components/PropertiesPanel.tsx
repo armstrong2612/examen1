@@ -3,6 +3,7 @@ import { Node, Edge } from "reactflow";
 import { removeFKRelation, updateFKRelation } from "../utils/relationHandler";
 import { askRelationType } from "../utils/relationPrompt";
 import { getEdgeStyle } from "../utils/relationStyles";
+import { getMultiplicitiesFromRelationType } from "../utils/multiplicityHelper";
 import type { Field } from "@shared/types";
 
 interface PropertiesPanelProps {
@@ -14,6 +15,7 @@ interface PropertiesPanelProps {
   onUpdate: (nodeId: string, updatedData: any) => void;
   socket?: any; // 🆕 Socket para emitir eventos
   project?: any; // 🆕 Proyecto actual
+  readOnly?: boolean; // 🆕 Si es true, el panel es solo lectura (viewer/invitado)
 }
 
 // Tipos de datos PostgreSQL comunes
@@ -44,7 +46,8 @@ export default function PropertiesPanel({
   setEdges,
   onUpdate,
   socket,
-  project
+  project,
+  readOnly = false
 }: PropertiesPanelProps) {
   const [table, setTable] = useState<any>(null);
 
@@ -88,6 +91,7 @@ export default function PropertiesPanel({
   }
 
   const updateTable = (key: string, value: any) => {
+    if (readOnly) return;
     const updated = { ...table, [key]: value };
     setTable(updated);
     onUpdate(selectedNode.id, updated);
@@ -192,6 +196,22 @@ export default function PropertiesPanel({
         </p>
       </div>
 
+      {/* 🆕 Aviso de solo lectura */}
+      {readOnly && (
+        <div style={{
+          marginBottom: 16,
+          padding: "10px 12px",
+          background: "rgba(102, 126, 234, 0.12)",
+          border: "1px solid rgba(102, 126, 234, 0.4)",
+          borderRadius: 8,
+          fontSize: 11,
+          color: "#aab4ff",
+          textAlign: "center"
+        }}>
+          👁️ Estás en modo solo lectura. Inicia sesión para editar.
+        </div>
+      )}
+
       {/* Nombre de la tabla */}
       <div style={{ marginBottom: 20 }}>
         <label style={{
@@ -206,6 +226,7 @@ export default function PropertiesPanel({
         </label>
         <input
           value={table.name || ""}
+          disabled={readOnly}
           placeholder="Nombre de tabla..."
           onChange={(e) => updateTable("name", e.target.value)}
           onBlur={(e) => {
@@ -250,15 +271,17 @@ export default function PropertiesPanel({
           </label>
           <button
             onClick={addField}
+            disabled={readOnly}
             style={{
               background: "#667eea",
               border: "none",
               color: "#fff",
               padding: "6px 12px",
-              cursor: "pointer",
+              cursor: readOnly ? "not-allowed" : "pointer",
               borderRadius: 4,
               fontSize: 11,
               fontWeight: 600,
+              opacity: readOnly ? 0.5 : 1,
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => e.currentTarget.style.background = "#7c8ef0"}
@@ -312,6 +335,7 @@ export default function PropertiesPanel({
                 <input
                   value={f.name}
                   onChange={(e) => updateField(i, "name", e.target.value)}
+                  disabled={readOnly}
                   placeholder="nombre_campo"
                   style={{
                     width: "100%",
@@ -339,6 +363,7 @@ export default function PropertiesPanel({
                 <select
                   value={f.type}
                   onChange={(e) => updateField(i, "type", e.target.value)}
+                  disabled={readOnly}
                   style={{
                     width: "100%",
                     background: "#1f1f1f",
@@ -379,7 +404,8 @@ export default function PropertiesPanel({
                     type="checkbox"
                     checked={f.isPrimary || false}
                     onChange={(e) => updateField(i, "isPrimary", e.target.checked)}
-                    style={{ cursor: "pointer" }}
+                    disabled={readOnly}
+                    style={{ cursor: readOnly ? "not-allowed" : "pointer" }}
                   />
                   🔑 PK
                 </label>
@@ -398,7 +424,8 @@ export default function PropertiesPanel({
                     type="checkbox"
                     checked={f.isForeign || false}
                     onChange={(e) => updateField(i, "isForeign", e.target.checked)}
-                    style={{ cursor: "pointer" }}
+                    disabled={readOnly}
+                    style={{ cursor: readOnly ? "not-allowed" : "pointer" }}
                   />
                   🔗 FK
                 </label>
@@ -418,8 +445,8 @@ export default function PropertiesPanel({
                     type="checkbox"
                     checked={f.nullable !== false}
                     onChange={(e) => updateField(i, "nullable", e.target.checked)}
-                    disabled={f.isPrimary}
-                    style={{ cursor: f.isPrimary ? "not-allowed" : "pointer" }}
+                    disabled={f.isPrimary || readOnly}
+                    style={{ cursor: (f.isPrimary || readOnly) ? "not-allowed" : "pointer" }}
                   />
                   Null
                 </label>
@@ -438,6 +465,7 @@ export default function PropertiesPanel({
                   </label>
                   <select
                     value={table.fields[i].references || ""}
+                    disabled={readOnly}
                     onChange={async (e) => {
                       const oldReference = table.fields[i].references;
                       const targetTable = e.target.value || null;
@@ -454,12 +482,13 @@ export default function PropertiesPanel({
                       }
 
                       // 🎨 PRIMERO: Mostrar modal para seleccionar tipo de relación
-                      const relationType = await askRelationType();
-                      if (!relationType) {
+                      const relationConfig = await askRelationType();
+                      if (!relationConfig) {
                         // Usuario canceló - NO actualizar nada
                         console.log("⚠️ [PropertiesPanel] User cancelled relation type selection");
                         return;
                       }
+                      const relationType = relationConfig.type;
 
                       // Encontrar el nodo destino y su campo PK
                       const targetNode = nodes.find(n =>
@@ -490,49 +519,43 @@ export default function PropertiesPanel({
                       // Esperar 100ms para asegurar que el nodo se guarde antes del edge
                       await new Promise(resolve => setTimeout(resolve, 100));
 
-                      // Eliminar relaciones FK previas si las había
-                      if (setEdges && oldReference) {
-                        const filteredEdges = edges.filter(e =>
-                          !(e.source === targetNode.id && e.target === selectedNode.id && e.label?.includes("‒"))
+                      // ✅ Eliminar CUALQUIER edge FK previo asociado a ESTE campo,
+                      // para evitar doble renderizado (mismo campo, misma tabla, incluso si
+                      // solo cambió el tipo de relación).
+                      const fkFieldName = newFields[i].name;
+                      if (setEdges) {
+                        const edgesToRemove = edges.filter(e =>
+                          e.target === selectedNode.id && e.data?.targetField === fkFieldName
                         );
-                        setEdges(filteredEdges);
 
-                        // Emitir eliminación de edges previos si hay socket
-                        if (socket && project) {
-                          edges.filter(e =>
-                            e.source === targetNode.id && e.target === selectedNode.id && e.label?.includes("‒")
-                          ).forEach(oldEdge => {
-                            socket.emit("diagram-change", {
-                              projectId: project.id,
-                              action: "DELETE_EDGE",
-                              payload: { id: oldEdge.id },
+                        if (edgesToRemove.length > 0) {
+                          setEdges((prev: Edge[]) =>
+                            prev.filter(e => !edgesToRemove.includes(e))
+                          );
+
+                          // Emitir eliminación de edges previos si hay socket
+                          if (socket && project) {
+                            edgesToRemove.forEach(oldEdge => {
+                              socket.emit("diagram-change", {
+                                projectId: project.id,
+                                action: "DELETE_EDGE",
+                                payload: { id: oldEdge.id },
+                              });
                             });
-                          });
+                          }
                         }
                       }
 
                       // Obtener estilo unificado según tipo de relación
                       const edgeStyle = getEdgeStyle(relationType);
+                      const multiplicities = getMultiplicitiesFromRelationType(relationType);
 
-                      // Mapear tipo a label legible en español
-                      const labelMap: Record<string, string> = {
-                        "1-1": "1‒1",
-                        "1-N": "1‒N",
-                        "N-N": "N‒N",
-                        "ASSOCIATION": "Asociación",
-                        "AGGREGATION": "Agregación",
-                        "COMPOSITION": "Composición",
-                        "INHERITANCE": "Herencia",
-                        "DEPENDENCY": "Dependencia",
-                        "REALIZATION": "Realización"
-                      };
-
-                      // Crear nuevo edge con el tipo seleccionado
+                      // Crear nuevo edge con el tipo seleccionado (consistente con los enlaces del lienzo)
                       const newEdge: Edge = {
                         id: `edge-fk-${Date.now()}`,
                         source: targetNode.id,   // Tabla referenciada (lado PK)
                         target: selectedNode.id, // Tabla con FK
-                        label: labelMap[relationType] || relationType,
+                        type: "umlMultiplicity",
                         animated: edgeStyle.animated,
                         style: {
                           stroke: edgeStyle.stroke,
@@ -541,14 +564,6 @@ export default function PropertiesPanel({
                           // Agregar markerEnd desde el style si existe (para UML markers personalizados)
                           ...(edgeStyle.style || {})
                         },
-                        type: edgeStyle.type,
-                        labelStyle: {
-                          fill: edgeStyle.stroke,
-                          fontWeight: 700,
-                          fontSize: 12,
-                          textShadow: "0 1px 3px rgba(0,0,0,0.8)"
-                        },
-                        labelBgStyle: edgeStyle.labelBgStyle,
                         markerEnd: typeof edgeStyle.markerEnd === 'object' ? {
                           type: (edgeStyle.markerEnd as any).type,
                           color: (edgeStyle.markerEnd as any).color,
@@ -559,7 +574,9 @@ export default function PropertiesPanel({
                         data: {
                           sourceField: targetPKName,           // Campo PK de la tabla referenciada
                           targetField: newFields[i].name,      // Campo FK de esta tabla
-                          relationType: relationType
+                          relationType: relationType,
+                          sourceMultiplicity: multiplicities.sourceMultiplicity,
+                          targetMultiplicity: multiplicities.targetMultiplicity
                         }
                       };
 
@@ -629,6 +646,7 @@ export default function PropertiesPanel({
               <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                 <button
                   onClick={() => duplicateField(i)}
+                  disabled={readOnly}
                   style={{
                     flex: 1,
                     background: "#333",
@@ -636,9 +654,10 @@ export default function PropertiesPanel({
                     color: "#aaa",
                     padding: "6px",
                     borderRadius: 4,
-                    cursor: "pointer",
+                    cursor: readOnly ? "not-allowed" : "pointer",
                     fontSize: 10,
                     fontWeight: 600,
+                    opacity: readOnly ? 0.5 : 1,
                     transition: "all 0.2s"
                   }}
                   onMouseEnter={(e) => {
@@ -656,6 +675,7 @@ export default function PropertiesPanel({
 
                 <button
                   onClick={() => removeField(i)}
+                  disabled={readOnly}
                   style={{
                     flex: 1,
                     background: "transparent",
@@ -663,9 +683,10 @@ export default function PropertiesPanel({
                     color: "#f66",
                     padding: "6px",
                     borderRadius: 4,
-                    cursor: "pointer",
+                    cursor: readOnly ? "not-allowed" : "pointer",
                     fontSize: 10,
                     fontWeight: 600,
+                    opacity: readOnly ? 0.5 : 1,
                     transition: "all 0.2s"
                   }}
                   onMouseEnter={(e) => {
@@ -703,15 +724,17 @@ export default function PropertiesPanel({
           </label>
           <button
             onClick={addMethod}
+            disabled={readOnly}
             style={{
               background: "#f39c12",
               border: "none",
               color: "#fff",
               padding: "6px 12px",
-              cursor: "pointer",
+              cursor: readOnly ? "not-allowed" : "pointer",
               borderRadius: 4,
               fontSize: 11,
               fontWeight: 600,
+              opacity: readOnly ? 0.5 : 1,
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => e.currentTarget.style.background = "#f1c40f"}
