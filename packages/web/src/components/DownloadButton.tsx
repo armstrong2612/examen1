@@ -38,7 +38,7 @@ export default function DownloadButton() {
     }
 
     toPng(diagramElement, {
-      backgroundColor: "#1a1a1a",
+      backgroundColor: "#1b2838",
       width: imageWidth,
       height: imageHeight,
       style: {
@@ -54,29 +54,29 @@ export default function DownloadButton() {
       <button
         onClick={onClick}
         style={{
-          padding: "10px 15px",
-          backgroundColor: "#9b59b6",
-          color: "white",
-          border: "none",
+          padding: "8px 15px",
+          backgroundColor: "#171a21",
+          color: "#c7d5e0",
+          border: "1px solid #2c3a48",
           borderRadius: "6px",
           cursor: "pointer",
-          fontSize: "14px",
+          fontSize: "13px",
           fontWeight: 600,
-          boxShadow: "0 2px 8px rgba(155, 89, 182, 0.3)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
           transition: "all 0.2s ease",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "#8e44ad";
+          e.currentTarget.style.backgroundColor = "#2c3a48";
           e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow = "0 4px 12px rgba(155, 89, 182, 0.4)";
+          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.45)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "#9b59b6";
+          e.currentTarget.style.backgroundColor = "#171a21";
           e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "0 2px 8px rgba(155, 89, 182, 0.3)";
+          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.35)";
         }}
       >
-        📸 Descargar PNG
+        Descargar PNG
       </button>
     </Panel>
   );

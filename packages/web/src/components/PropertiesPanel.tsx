@@ -13,9 +13,9 @@ interface PropertiesPanelProps {
   nodes?: Node[];
   setEdges?: React.Dispatch<React.SetStateAction<Edge[]>>;
   onUpdate: (nodeId: string, updatedData: any) => void;
-  socket?: any; // 🆕 Socket para emitir eventos
-  project?: any; // 🆕 Proyecto actual
-  readOnly?: boolean; // 🆕 Si es true, el panel es solo lectura (viewer/invitado)
+  socket?: any; // Socket para emitir eventos
+  project?: any; // Proyecto actual
+  readOnly?: boolean; // Si es true, el panel es solo lectura (viewer/invitado)
 }
 
 // Tipos de datos PostgreSQL comunes
@@ -67,10 +67,10 @@ export default function PropertiesPanel({
     return (
       <div
         style={{
-          background: "#1a1a1a",
-          color: "#aaa",
+          background: "#171a21",
+          color: "#8f98a0",
           padding: 20,
-          borderLeft: "1px solid #333",
+          borderLeft: "1px solid #2c3a48",
           height: "100vh",
           width: 320,
           display: "flex",
@@ -81,8 +81,7 @@ export default function PropertiesPanel({
           boxSizing: "border-box"
         }}
       >
-        <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📋</div>
-        <p style={{ margin: 0, fontSize: 14 }}>Selecciona una tabla</p>
+        <p style={{ margin: 0, fontSize: 14, color: "#b8c7d4" }}>Selecciona una tabla</p>
         <p style={{ margin: "8px 0 0", fontSize: 12, opacity: 0.7 }}>
           Haz clic en un nodo para editar sus propiedades
         </p>
@@ -123,7 +122,7 @@ export default function PropertiesPanel({
       isForeign: false,
       nullable: true,
       references: null,
-      relationType: undefined, // 🆕 Inicializar relationType
+      relationType: undefined, // Inicializar relationType
       isMethod: false, // Es un atributo regular
     };
     updateTable("fields", [...table.fields, newField]);
@@ -159,11 +158,11 @@ export default function PropertiesPanel({
   return (
     <div
       style={{
-        background: "#1a1a1a",
-        color: "white",
+        background: "#171a21",
+        color: "#c7d5e0",
         padding: 16,
         width: 320,
-        borderLeft: "1px solid #333",
+        borderLeft: "1px solid #2c3a48",
         height: "100vh",
         overflowY: "auto",
         flexShrink: 0,
@@ -175,40 +174,41 @@ export default function PropertiesPanel({
       <div style={{
         marginBottom: 20,
         paddingBottom: 16,
-        borderBottom: "2px solid #667eea"
+        borderBottom: "2px solid #66c0f4"
       }}>
         <h3 style={{
           margin: "0 0 8px 0",
           fontSize: 16,
-          color: "#667eea",
+          color: "#e6edf3",
+          fontWeight: 700,
           display: "flex",
           alignItems: "center",
           gap: 8
         }}>
-          ⚙️ Propiedades
+          Propiedades
         </h3>
         <p style={{
           margin: 0,
           fontSize: 11,
-          opacity: 0.6
+          color: "#8f98a0"
         }}>
           Edita los campos de la tabla seleccionada
         </p>
       </div>
 
-      {/* 🆕 Aviso de solo lectura */}
+      {/* Aviso de solo lectura */}
       {readOnly && (
         <div style={{
           marginBottom: 16,
           padding: "10px 12px",
-          background: "rgba(102, 126, 234, 0.12)",
-          border: "1px solid rgba(102, 126, 234, 0.4)",
+          background: "rgba(102,192,244,0.12)",
+          border: "1px solid rgba(102,192,244,0.35)",
           borderRadius: 8,
           fontSize: 11,
-          color: "#aab4ff",
+          color: "#9cc9f5",
           textAlign: "center"
         }}>
-          👁️ Estás en modo solo lectura. Inicia sesión para editar.
+          Estás en modo solo lectura. Inicia sesión para editar.
         </div>
       )}
 
@@ -219,7 +219,7 @@ export default function PropertiesPanel({
           fontSize: 11,
           fontWeight: 600,
           marginBottom: 6,
-          opacity: 0.8,
+          color: "#8f98a0",
           letterSpacing: "0.5px"
         }}>
           NOMBRE DE LA TABLA
@@ -235,20 +235,21 @@ export default function PropertiesPanel({
               updateTable("name", "");
             }
             // Restaurar borde
-            e.target.style.borderColor = "#333";
+            e.target.style.borderColor = "#2c3a48";
+            e.target.style.boxShadow = "none";
           }}
-          onFocus={(e) => e.target.style.borderColor = "#667eea"}
+          onFocus={(e) => { e.target.style.borderColor = "#66c0f4"; e.target.style.boxShadow = "0 0 0 3px rgba(102,192,244,0.15)"; }}
           style={{
             width: "100%",
-            background: "#252525",
-            color: "#fff",
-            border: "2px solid #333",
+            background: "#1b2838",
+            color: "#c7d5e0",
+            border: "1px solid #2c3a48",
             padding: "10px 12px",
             borderRadius: 6,
             fontSize: 14,
             fontWeight: 600,
             outline: "none",
-            transition: "border-color 0.2s"
+            transition: "border-color 0.2s, box-shadow 0.2s"
           }}
         />
       </div>
@@ -264,16 +265,16 @@ export default function PropertiesPanel({
           <label style={{
             fontSize: 11,
             fontWeight: 600,
-            opacity: 0.8,
+            color: "#8f98a0",
             letterSpacing: "0.5px"
           }}>
-            📦 ATRIBUTOS ({table.fields.filter((f: Field) => !f.isMethod).length})
+            ATRIBUTOS ({table.fields.filter((f: Field) => !f.isMethod).length})
           </label>
           <button
             onClick={addField}
             disabled={readOnly}
             style={{
-              background: "#667eea",
+              background: "#66c0f4",
               border: "none",
               color: "#fff",
               padding: "6px 12px",
@@ -284,10 +285,10 @@ export default function PropertiesPanel({
               opacity: readOnly ? 0.5 : 1,
               transition: "all 0.2s"
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#7c8ef0"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#667eea"}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#4da6e0"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#66c0f4"}
           >
-            ➕ Agregar Atributo
+            Agregar Atributo
           </button>
         </div>
 
@@ -295,12 +296,11 @@ export default function PropertiesPanel({
           <div style={{
             textAlign: "center",
             padding: "24px 16px",
-            background: "#252525",
+            background: "#12161c",
             borderRadius: 8,
-            border: "2px dashed #333"
+            border: "1px dashed #2c3a48"
           }}>
-            <div style={{ fontSize: 28, marginBottom: 6, opacity: 0.3 }}>📝</div>
-            <p style={{ margin: 0, fontSize: 11, opacity: 0.6 }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#8f98a0" }}>
               No hay atributos. Agrega uno para empezar.
             </p>
           </div>
@@ -312,15 +312,15 @@ export default function PropertiesPanel({
             <div
               key={f.id}
               style={{
-                background: "#252525",
+                background: "#12161c",
                 padding: 12,
                 borderRadius: 8,
                 marginBottom: 12,
-                border: "1px solid #333",
+                border: "1px solid #2c3a48",
                 transition: "border-color 0.2s"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = "#444"}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = "#333"}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = "#42596e"}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2c3a48"}
             >
               {/* Nombre del campo */}
               <div style={{ marginBottom: 8 }}>
@@ -328,7 +328,7 @@ export default function PropertiesPanel({
                   display: "block",
                   fontSize: 10,
                   marginBottom: 4,
-                  opacity: 0.6
+                  color: "#8f98a0"
                 }}>
                   Nombre
                 </label>
@@ -339,9 +339,9 @@ export default function PropertiesPanel({
                   placeholder="nombre_campo"
                   style={{
                     width: "100%",
-                    background: "#1f1f1f",
-                    color: "#fff",
-                    border: "1px solid #333",
+                    background: "#1b2838",
+                    color: "#c7d5e0",
+                    border: "1px solid #2c3a48",
                     padding: "8px 10px",
                     borderRadius: 4,
                     fontSize: 13,
@@ -356,7 +356,7 @@ export default function PropertiesPanel({
                   display: "block",
                   fontSize: 10,
                   marginBottom: 4,
-                  opacity: 0.6
+                  color: "#8f98a0"
                 }}>
                   Tipo de dato
                 </label>
@@ -366,9 +366,9 @@ export default function PropertiesPanel({
                   disabled={readOnly}
                   style={{
                     width: "100%",
-                    background: "#1f1f1f",
-                    color: "#fff",
-                    border: "1px solid #333",
+                    background: "#1b2838",
+                    color: "#c7d5e0",
+                    border: "1px solid #2c3a48",
                     padding: "8px 10px",
                     borderRadius: 4,
                     fontSize: 12,
@@ -388,11 +388,12 @@ export default function PropertiesPanel({
                 gap: 12,
                 marginBottom: 8,
                 paddingTop: 8,
-                borderTop: "1px solid #2a2a2a"
+                borderTop: "1px solid #2c3a48"
               }}>
                 <label
                   style={{
                     fontSize: 11,
+                    color: "#8f98a0",
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
@@ -405,14 +406,15 @@ export default function PropertiesPanel({
                     checked={f.isPrimary || false}
                     onChange={(e) => updateField(i, "isPrimary", e.target.checked)}
                     disabled={readOnly}
-                    style={{ cursor: readOnly ? "not-allowed" : "pointer" }}
+                    style={{ cursor: readOnly ? "not-allowed" : "pointer", accentColor: "#d9a23c" }}
                   />
-                  🔑 PK
+                  PK
                 </label>
 
                 <label
                   style={{
                     fontSize: 11,
+                    color: "#8f98a0",
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
@@ -425,14 +427,15 @@ export default function PropertiesPanel({
                     checked={f.isForeign || false}
                     onChange={(e) => updateField(i, "isForeign", e.target.checked)}
                     disabled={readOnly}
-                    style={{ cursor: readOnly ? "not-allowed" : "pointer" }}
+                    style={{ cursor: readOnly ? "not-allowed" : "pointer", accentColor: "#66c0f4" }}
                   />
-                  🔗 FK
+                  FK
                 </label>
 
                 <label
                   style={{
                     fontSize: 11,
+                    color: "#8f98a0",
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
@@ -446,7 +449,7 @@ export default function PropertiesPanel({
                     checked={f.nullable !== false}
                     onChange={(e) => updateField(i, "nullable", e.target.checked)}
                     disabled={f.isPrimary || readOnly}
-                    style={{ cursor: (f.isPrimary || readOnly) ? "not-allowed" : "pointer" }}
+                    style={{ cursor: (f.isPrimary || readOnly) ? "not-allowed" : "pointer", accentColor: "#6b7989" }}
                   />
                   Null
                 </label>
@@ -459,7 +462,7 @@ export default function PropertiesPanel({
                     display: "block",
                     fontSize: 10,
                     marginBottom: 4,
-                    opacity: 0.6
+                    color: "#8f98a0"
                   }}>
                     Tabla referenciada
                   </label>
@@ -481,7 +484,7 @@ export default function PropertiesPanel({
                         return;
                       }
 
-                      // 🎨 PRIMERO: Mostrar modal para seleccionar tipo de relación
+                      // PRIMERO: Mostrar modal para seleccionar tipo de relación
                       const relationConfig = await askRelationType();
                       if (!relationConfig) {
                         // Usuario canceló - NO actualizar nada
@@ -500,18 +503,18 @@ export default function PropertiesPanel({
                         return;
                       }
 
-                      // 🆕 Detectar el campo PK de la tabla referenciada
+                      // Detectar el campo PK de la tabla referenciada
                       const targetPKField = targetNode.data.fields?.find((f: any) => f.isPrimary);
                       const targetPKName = targetPKField?.name || "id";
 
                       console.log(`🔗 [PropertiesPanel] Creating ${relationType} relation to ${targetTable}.${targetPKName}`);
 
-                      // ✅ SEGUNDO: Actualizar el campo con references, referencesField Y relationType juntos
+                      // SEGUNDO: Actualizar el campo con references, referencesField Y relationType juntos
                       const newFields = [...table.fields];
                       newFields[i] = {
                         ...newFields[i],
                         references: targetTable,
-                        referencesField: targetPKName, // 🆕 Guardar campo PK específico
+                        referencesField: targetPKName, // Guardar campo PK específico
                         relationType: relationType
                       };
                       updateTable("fields", newFields);
@@ -519,7 +522,7 @@ export default function PropertiesPanel({
                       // Esperar 100ms para asegurar que el nodo se guarde antes del edge
                       await new Promise(resolve => setTimeout(resolve, 100));
 
-                      // ✅ Eliminar CUALQUIER edge FK previo asociado a ESTE campo,
+                      // Eliminar CUALQUIER edge FK previo asociado a ESTE campo,
                       // para evitar doble renderizado (mismo campo, misma tabla, incluso si
                       // solo cambió el tipo de relación).
                       const fkFieldName = newFields[i].name;
@@ -570,7 +573,7 @@ export default function PropertiesPanel({
                           width: 20,
                           height: 20
                         } : undefined,
-                        // 🆕 Guardar campos específicos en data del edge
+                        // Guardar campos específicos en data del edge
                         data: {
                           sourceField: targetPKName,           // Campo PK de la tabla referenciada
                           targetField: newFields[i].name,      // Campo FK de esta tabla
@@ -598,9 +601,9 @@ export default function PropertiesPanel({
                     }}
                     style={{
                       width: "100%",
-                      background: "#2a2a2a",
-                      color: "#fff",
-                      border: "1px solid #444",
+                      background: "#1b2838",
+                      color: "#c7d5e0",
+                      border: "1px solid #2c3a48",
                       padding: "8px 10px",
                       borderRadius: 4,
                       fontSize: 12,
@@ -618,12 +621,12 @@ export default function PropertiesPanel({
                       ))}
                   </select>
 
-                  {/* 🆕 Mostrar tipo de relación actual */}
+                  {/* Mostrar tipo de relación actual */}
                   {f.relationType && (
                     <div style={{
                       marginTop: 6,
                       fontSize: 10,
-                      opacity: 0.7,
+                      color: "#8f98a0",
                       display: "flex",
                       alignItems: "center",
                       gap: 4
@@ -631,9 +634,9 @@ export default function PropertiesPanel({
                       <span>Tipo:</span>
                       <span style={{
                         fontWeight: "bold",
-                        color: f.relationType === "1-1" ? "#74b9ff" :
-                          f.relationType === "1-N" ? "#00cec9" :
-                            f.relationType === "N-N" ? "#ff7675" : "#aaa"
+                        color: f.relationType === "1-1" ? "#63c4f5" :
+                          f.relationType === "1-N" ? "#5fd4e8" :
+                            f.relationType === "N-N" ? "#f98a9e" : "#8f98a0"
                       }}>
                         {f.relationType}
                       </span>
@@ -649,9 +652,9 @@ export default function PropertiesPanel({
                   disabled={readOnly}
                   style={{
                     flex: 1,
-                    background: "#333",
-                    border: "none",
-                    color: "#aaa",
+                    background: "#1b2838",
+                    border: "1px solid #2c3a48",
+                    color: "#8f98a0",
                     padding: "6px",
                     borderRadius: 4,
                     cursor: readOnly ? "not-allowed" : "pointer",
@@ -661,16 +664,16 @@ export default function PropertiesPanel({
                     transition: "all 0.2s"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#444";
-                    e.currentTarget.style.color = "#fff";
+                    e.currentTarget.style.background = "#2c3a48";
+                    e.currentTarget.style.color = "#e6edf3";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "#333";
-                    e.currentTarget.style.color = "#aaa";
+                    e.currentTarget.style.background = "#1b2838";
+                    e.currentTarget.style.color = "#8f98a0";
                   }}
                   title="Duplicar campo"
                 >
-                  📋 Duplicar
+                  Duplicar
                 </button>
 
                 <button
@@ -679,8 +682,8 @@ export default function PropertiesPanel({
                   style={{
                     flex: 1,
                     background: "transparent",
-                    border: "1px solid #f66",
-                    color: "#f66",
+                    border: "1px solid rgba(239,131,131,0.5)",
+                    color: "#ef8383",
                     padding: "6px",
                     borderRadius: 4,
                     cursor: readOnly ? "not-allowed" : "pointer",
@@ -690,15 +693,15 @@ export default function PropertiesPanel({
                     transition: "all 0.2s"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#f66";
+                    e.currentTarget.style.background = "#dc4b4b";
                     e.currentTarget.style.color = "#fff";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#f66";
+                    e.currentTarget.style.color = "#ef8383";
                   }}
                 >
-                  🗑 Eliminar
+                  Eliminar
                 </button>
               </div>
             </div>
@@ -717,16 +720,16 @@ export default function PropertiesPanel({
           <label style={{
             fontSize: 11,
             fontWeight: 600,
-            opacity: 0.8,
+            color: "#8f98a0",
             letterSpacing: "0.5px"
           }}>
-            ⚙️ MÉTODOS ({table.fields.filter((f: Field) => f.isMethod).length})
+            MÉTODOS ({table.fields.filter((f: Field) => f.isMethod).length})
           </label>
           <button
             onClick={addMethod}
             disabled={readOnly}
             style={{
-              background: "#f39c12",
+              background: "#d9a23c",
               border: "none",
               color: "#fff",
               padding: "6px 12px",
@@ -737,10 +740,10 @@ export default function PropertiesPanel({
               opacity: readOnly ? 0.5 : 1,
               transition: "all 0.2s"
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#f1c40f"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#f39c12"}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#c08a2f"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "#d9a23c"}
           >
-            ➕ Agregar Método
+            Agregar Método
           </button>
         </div>
 
@@ -748,12 +751,11 @@ export default function PropertiesPanel({
           <div style={{
             textAlign: "center",
             padding: "24px 16px",
-            background: "#252525",
+            background: "#12161c",
             borderRadius: 8,
-            border: "2px dashed #333"
+            border: "1px dashed #2c3a48"
           }}>
-            <div style={{ fontSize: 28, marginBottom: 6, opacity: 0.3 }}>⚙️</div>
-            <p style={{ margin: 0, fontSize: 11, opacity: 0.6 }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#8f98a0" }}>
               No hay métodos. (Solo visible en vista UML)
             </p>
           </div>
@@ -765,15 +767,15 @@ export default function PropertiesPanel({
             <div
               key={f.id}
               style={{
-                background: "#2d2416",
+                background: "rgba(217,162,60,0.12)",
                 padding: 12,
                 borderRadius: 8,
                 marginBottom: 12,
-                border: "1px solid #f39c12",
+                border: "1px solid rgba(217,162,60,0.45)",
                 transition: "border-color 0.2s"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f1c40f"}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = "#f39c12"}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = "#d9a23c"}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = "rgba(217,162,60,0.45)"}
             >
               {/* Nombre del método */}
               <div style={{ marginBottom: 8 }}>
@@ -781,7 +783,7 @@ export default function PropertiesPanel({
                   display: "block",
                   fontSize: 10,
                   marginBottom: 4,
-                  opacity: 0.6
+                  color: "#f0b24c"
                 }}>
                   Método
                 </label>
@@ -791,9 +793,9 @@ export default function PropertiesPanel({
                   placeholder="nuevoMetodo()"
                   style={{
                     width: "100%",
-                    background: "#1f1f1f",
-                    color: "#f1c40f",
-                    border: "1px solid #f39c12",
+                    background: "#1b2838",
+                    color: "#f0b24c",
+                    border: "1px solid rgba(217,162,60,0.4)",
                     padding: "8px",
                     borderRadius: 4,
                     fontSize: 12,
@@ -801,8 +803,8 @@ export default function PropertiesPanel({
                     outline: "none",
                     transition: "border-color 0.2s"
                   }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = "#f1c40f"}
-                  onBlur={(e) => e.currentTarget.style.borderColor = "#f39c12"}
+                  onFocus={(e) => e.currentTarget.style.borderColor = "#d9a23c"}
+                  onBlur={(e) => e.currentTarget.style.borderColor = "rgba(217,162,60,0.4)"}
                 />
               </div>
 
@@ -812,8 +814,8 @@ export default function PropertiesPanel({
                 style={{
                   width: "100%",
                   background: "transparent",
-                  border: "1px solid #e74c3c",
-                  color: "#e74c3c",
+                  border: "1px solid rgba(239,131,131,0.5)",
+                  color: "#ef8383",
                   padding: "6px",
                   borderRadius: 4,
                   cursor: "pointer",
@@ -822,15 +824,15 @@ export default function PropertiesPanel({
                   transition: "all 0.2s"
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#e74c3c";
+                  e.currentTarget.style.background = "#dc4b4b";
                   e.currentTarget.style.color = "#fff";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#e74c3c";
+                  e.currentTarget.style.color = "#ef8383";
                 }}
               >
-                🗑 Eliminar Método
+                Eliminar Método
               </button>
             </div>
           ))

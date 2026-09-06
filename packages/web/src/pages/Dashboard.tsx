@@ -101,24 +101,24 @@ export default function Dashboard({ user }: DashboardProps) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #1e1e2f, #27293d)",
-      color: "#fff",
+      background: "#1b2838",
+      color: "#c7d5e0",
       padding: "40px"
     }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
         <div style={{ marginBottom: "40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ fontSize: "32px", marginBottom: "8px" }}>
-              👋 Bienvenido, {user.name}
+            <h1 style={{ fontSize: "26px", marginBottom: "8px", color: "#e6edf3" }}>
+              Hola, {user.name}
             </h1>
-            <p style={{ opacity: 0.7 }}>{user.email}</p>
+            <p style={{ color: "#8f98a0" }}>{user.email}</p>
           </div>
           
           <button
             onClick={handleLogout}
             style={{
               padding: "10px 20px",
-              background: "#dc3545",
+              background: "#dc4b4b",
               color: "white",
               border: "none",
               borderRadius: "8px",
@@ -127,10 +127,10 @@ export default function Dashboard({ user }: DashboardProps) {
               fontWeight: "600",
               transition: "all 0.2s"
             }}
-            onMouseOver={(e) => e.currentTarget.style.background = "#c82333"}
-            onMouseOut={(e) => e.currentTarget.style.background = "#dc3545"}
+            onMouseOver={(e) => e.currentTarget.style.background = "#b03838"}
+            onMouseOut={(e) => e.currentTarget.style.background = "#dc4b4b"}
           >
-            🔒 Cerrar sesión
+            Cerrar sesión
           </button>
         </div>
 
@@ -139,19 +139,19 @@ export default function Dashboard({ user }: DashboardProps) {
         ) : (
           <>
             <div style={{ marginBottom: "32px" }}>
-              <h2 style={{ fontSize: "24px", marginBottom: "16px" }}>
-                📂 Mis Proyectos
+              <h2 style={{ fontSize: "20px", marginBottom: "16px", color: "#e6edf3" }}>
+                Mis Proyectos
               </h2>
               
               {projects.length === 0 ? (
                 <div style={{
                   padding: "60px",
                   textAlign: "center",
-                  background: "rgba(255,255,255,0.05)",
+                  background: "#171a21",
                   borderRadius: "12px",
-                  border: "2px dashed rgba(255,255,255,0.2)"
+                  border: "1px dashed #2c3a48"
                 }}>
-                  <p style={{ fontSize: "18px", opacity: 0.7 }}>
+                  <p style={{ fontSize: "18px", color: "#8f98a0" }}>
                     No tienes proyectos aún. Crea uno para comenzar.
                   </p>
                 </div>
@@ -161,12 +161,14 @@ export default function Dashboard({ user }: DashboardProps) {
                     <div
                       key={p.id}
                       style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        background: "#171a21",
+                        border: "1px solid #2c3a48",
                         padding: "20px",
                         borderRadius: "12px",
-                        transition: "all 0.2s"
+                        transition: "border-color 0.2s, box-shadow 0.2s"
                       }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#66c0f4"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(102,192,244,0.15)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2c3a48"; e.currentTarget.style.boxShadow = "none"; }}
                     >
                       <div style={{
                         display: "flex",
@@ -175,10 +177,10 @@ export default function Dashboard({ user }: DashboardProps) {
                         marginBottom: "12px"
                       }}>
                         <div style={{ flex: 1 }}>
-                          <h3 style={{ fontSize: "20px", marginBottom: "4px" }}>
+                          <h3 style={{ fontSize: "18px", marginBottom: "4px", color: "#e6edf3" }}>
                             {p.name}
                           </h3>
-                          <p style={{ fontSize: "14px", opacity: 0.6 }}>
+                          <p style={{ fontSize: "14px", color: "#8f98a0" }}>
                             {p.users?.length || 0} miembro(s) · {p.diagrams?.length || 0} diagrama(s)
                           </p>
                         </div>
@@ -187,16 +189,19 @@ export default function Dashboard({ user }: DashboardProps) {
                           onClick={() => openProject(p)}
                           style={{
                             padding: "10px 24px",
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            background: "#66c0f4",
                             color: "#fff",
                             border: "none",
                             borderRadius: "8px",
                             cursor: "pointer",
                             fontSize: "14px",
-                            fontWeight: "600"
+                            fontWeight: "600",
+                            transition: "background 0.2s"
                           }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "#4da6e0"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "#66c0f4"}
                         >
-                          Abrir →
+                          Abrir
                         </button>
                       </div>
 
@@ -204,44 +209,48 @@ export default function Dashboard({ user }: DashboardProps) {
                       <div style={{
                         marginTop: "16px",
                         paddingTop: "16px",
-                        borderTop: "1px solid rgba(255,255,255,0.1)"
+                        borderTop: "1px solid #2c3a48"
                       }}>
                         <button
                           onClick={() => createInvitation(p.id)}
                           style={{
                             width: "100%",
                             padding: "10px 16px",
-                            background: "rgba(102, 126, 234, 0.3)",
-                            border: "1px solid rgba(102, 126, 234, 0.5)",
-                            color: "#fff",
+                            background: "rgba(59, 130, 246, 0.12)",
+                            border: "1px solid rgba(59, 130, 246, 0.35)",
+                            color: "#9cc9f5",
                             borderRadius: "6px",
                             cursor: "pointer",
                             fontSize: "14px",
-                            fontWeight: "600"
+                            fontWeight: "600",
+                            transition: "all 0.2s"
                           }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)"; e.currentTarget.style.borderColor = "#66c0f4"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)"; e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.35)"; }}
                         >
-                          🔗 Generar Link de Invitación
+                          Generar Link de Invitación
                         </button>
                         
                         {inviteProject === p.id && inviteLink && (
                           <div style={{
                             marginTop: "12px",
                             padding: "12px",
-                            background: "rgba(76, 175, 80, 0.1)",
-                            border: "1px solid rgba(76, 175, 80, 0.3)",
+                            background: "rgba(34, 197, 94, 0.1)",
+                            border: "1px solid rgba(34, 197, 94, 0.3)",
                             borderRadius: "6px",
                             fontSize: "13px"
                           }}>
-                            <div style={{ marginBottom: "8px", opacity: 0.8, fontWeight: "bold" }}>
-                              ✅ Link universal generado:
+                            <div style={{ marginBottom: "8px", color: "#a5d96a", fontWeight: "bold" }}>
+                              Link universal generado:
                             </div>
                             <code style={{
                               display: "block",
                               padding: "8px",
-                              background: "rgba(0,0,0,0.3)",
+                              background: "#1b2838",
                               borderRadius: "4px",
                               wordBreak: "break-all",
-                              color: "#4CAF50"
+                              color: "#a5d96a",
+                              border: "1px solid #2c3a48"
                             }}>
                               {inviteLink}
                             </code>
@@ -257,12 +266,12 @@ export default function Dashboard({ user }: DashboardProps) {
             {/* Create new project */}
             <div style={{
               padding: "24px",
-              background: "rgba(255,255,255,0.03)",
+              background: "#171a21",
               borderRadius: "12px",
-              border: "1px solid rgba(255,255,255,0.1)"
+              border: "1px solid #2c3a48"
             }}>
-              <h3 style={{ fontSize: "18px", marginBottom: "16px" }}>
-                ➕ Crear Nuevo Proyecto
+              <h3 style={{ fontSize: "16px", marginBottom: "16px", color: "#e6edf3" }}>
+                Crear Nuevo Proyecto
               </h3>
               <div style={{ display: "flex", gap: "12px" }}>
                 <input
@@ -275,24 +284,31 @@ export default function Dashboard({ user }: DashboardProps) {
                     flex: 1,
                     padding: "12px 16px",
                     borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "#fff",
-                    fontSize: "15px"
+                    border: "1px solid #2c3a48",
+                    background: "#1b2838",
+                    color: "#c7d5e0",
+                    fontSize: "15px",
+                    outline: "none",
+                    transition: "border-color 0.2s"
                   }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = "#66c0f4"}
+                  onBlur={(e) => e.currentTarget.style.borderColor = "#2c3a48"}
                 />
                 <button
                   onClick={createProject}
                   style={{
                     padding: "12px 32px",
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    background: "#66c0f4",
                     color: "#fff",
                     border: "none",
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "15px",
-                    fontWeight: "600"
+                    fontWeight: "600",
+                    transition: "background 0.2s"
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#4da6e0"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "#66c0f4"}
                 >
                   Crear
                 </button>
@@ -302,13 +318,13 @@ export default function Dashboard({ user }: DashboardProps) {
             {/* Join by invitation link */}
             <div style={{
               padding: "24px",
-              background: "rgba(255,255,255,0.03)",
+              background: "#171a21",
               borderRadius: "12px",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid #2c3a48",
               marginTop: "16px"
             }}>
-              <h3 style={{ fontSize: "18px", marginBottom: "16px" }}>
-                🔗 Unirse con Enlace de Invitación
+              <h3 style={{ fontSize: "16px", marginBottom: "16px", color: "#e6edf3" }}>
+                Unirse con Enlace de Invitación
               </h3>
               <div style={{ display: "flex", gap: "12px" }}>
                 <input
@@ -321,24 +337,31 @@ export default function Dashboard({ user }: DashboardProps) {
                     flex: 1,
                     padding: "12px 16px",
                     borderRadius: "8px",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "#fff",
-                    fontSize: "15px"
+                    border: "1px solid #2c3a48",
+                    background: "#1b2838",
+                    color: "#c7d5e0",
+                    fontSize: "15px",
+                    outline: "none",
+                    transition: "border-color 0.2s"
                   }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = "#66c0f4"}
+                  onBlur={(e) => e.currentTarget.style.borderColor = "#2c3a48"}
                 />
                 <button
                   onClick={joinByLink}
                   style={{
                     padding: "12px 32px",
-                    background: "linear-gradient(135deg, #4CAF50 0%, #45a049 100%)",
+                    background: "#7ab540",
                     color: "#fff",
                     border: "none",
                     borderRadius: "8px",
                     cursor: "pointer",
                     fontSize: "15px",
-                    fontWeight: "600"
+                    fontWeight: "600",
+                    transition: "background 0.2s"
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#69983a"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "#7ab540"}
                 >
                   Unirme
                 </button>

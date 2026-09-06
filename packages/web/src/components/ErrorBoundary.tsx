@@ -50,13 +50,12 @@ class ErrorBoundary extends Component<Props, State> {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1a1a1a",
-          color: "white",
+          background: "#1b2838",
+          color: "#c7d5e0",
           padding: "20px",
           textAlign: "center",
         }}>
-          <div style={{ fontSize: "64px", marginBottom: "20px" }}>🚨</div>
-          <h1 style={{ fontSize: "24px", marginBottom: "12px" }}>
+          <h1 style={{ fontSize: "24px", marginBottom: "12px", color: "#e6edf3" }}>
             Algo salió mal
           </h1>
           <p style={{ fontSize: "16px", opacity: 0.7, marginBottom: "24px", maxWidth: "600px" }}>
@@ -65,7 +64,7 @@ class ErrorBoundary extends Component<Props, State> {
           
           {this.state.error && (
             <div style={{
-              background: "#2a2a2a",
+              background: "#171a21",
               padding: "16px",
               borderRadius: "8px",
               marginBottom: "24px",
@@ -74,8 +73,9 @@ class ErrorBoundary extends Component<Props, State> {
               fontFamily: "monospace",
               fontSize: "14px",
               overflow: "auto",
+              border: "1px solid #2c3a48",
             }}>
-              <div style={{ color: "#FF5722", marginBottom: "8px", fontWeight: "bold" }}>
+              <div style={{ color: "#ef8383", marginBottom: "8px", fontWeight: "bold" }}>
                 {this.state.error.toString()}
               </div>
               {this.state.errorInfo && (
@@ -90,7 +90,7 @@ class ErrorBoundary extends Component<Props, State> {
             onClick={() => window.location.reload()}
             style={{
               padding: "12px 24px",
-              background: "#4CAF50",
+              background: "#66c0f4",
               border: "none",
               borderRadius: "6px",
               color: "white",
@@ -99,7 +99,7 @@ class ErrorBoundary extends Component<Props, State> {
               fontWeight: "bold",
             }}
           >
-            🔄 Recargar página
+            Recargar página
           </button>
         </div>
       );

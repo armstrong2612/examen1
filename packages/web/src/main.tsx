@@ -7,6 +7,7 @@ import AcceptInvite from "./pages/AcceptInvite";
 import Login from "./pages/Login";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ViewModeProvider } from "./store/ViewModeContext";
+import "./styles/global.css";
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>

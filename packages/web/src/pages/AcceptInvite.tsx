@@ -7,7 +7,7 @@ export default function AcceptInvite() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { user, setUser, setProject } = useAppStore();
-  const [status, setStatus] = useState("🔍 Validando invitación...");
+  const [status, setStatus] = useState("Validando invitación...");
   const [projectName, setProjectName] = useState("");
 
   useEffect(() => {
@@ -20,12 +20,12 @@ export default function AcceptInvite() {
         
         console.log("✅ [AcceptInvite] Invitation found:", invitation);
         setProjectName(invitation.project.name);
-        setStatus(`✅ Invitación válida`);
+        setStatus("Invitación válida");
 
         if (!user) {
           // Crear usuario temporal VIEWER y mostrar proyecto
           console.log("👥 [AcceptInvite] No user, entering as guest VIEWER");
-          setStatus(`👥 Accediendo al proyecto "${invitation.project.name}" como invitado...`);
+          setStatus(`Accediendo al proyecto "${invitation.project.name}" como invitado...`);
           
           const guestUser = {
             id: `guest_${Date.now()}`,
@@ -42,7 +42,7 @@ export default function AcceptInvite() {
         } else {
           // Usuario ya autenticado: vincular al proyecto
           console.log("✅ [AcceptInvite] User logged in, accepting invitation");
-          setStatus(`📋 Uniéndote al proyecto "${invitation.project.name}"...`);
+          setStatus(`Uniéndote al proyecto "${invitation.project.name}"...`);
           
           await api.post("/api/invitations/accept", { 
             token, 
@@ -59,9 +59,9 @@ export default function AcceptInvite() {
         console.error("❌ [AcceptInvite] Error:", err);
         console.error("❌ [AcceptInvite] Error details:", err.response?.data);
         if (err.response?.status === 404) {
-          setStatus("❌ Invitación no encontrada");
+          setStatus("Invitación no encontrada");
         } else {
-          setStatus(`❌ Error al procesar la invitación: ${err.message}`);
+          setStatus(`Error al procesar la invitación: ${err.message}`);
         }
       }
     };
@@ -75,8 +75,8 @@ export default function AcceptInvite() {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #1e1e2f, #27293d)",
-        color: "#fff",
+        background: "#1b2838",
+        color: "#c7d5e0",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -85,23 +85,24 @@ export default function AcceptInvite() {
     >
       <div
         style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "16px",
+          background: "#171a21",
+          border: "1px solid #2c3a48",
+          borderRadius: "12px",
           padding: "40px",
           maxWidth: "500px",
           width: "100%",
           textAlign: "center",
+          boxShadow: "0 8px 30px rgba(0,0,0,0.35)"
         }}
       >
-        <h1 style={{ fontSize: "32px", marginBottom: "24px" }}>
-          🎟️ Invitación de Proyecto
+        <h1 style={{ fontSize: "28px", marginBottom: "24px", color: "#e6edf3" }}>
+          Invitación de Proyecto
         </h1>
         
         <div style={{
-          fontSize: "18px",
+          fontSize: "16px",
           lineHeight: "1.6",
-          opacity: 0.9
+          color: "#8f98a0"
         }}>
           {status}
         </div>
@@ -110,12 +111,12 @@ export default function AcceptInvite() {
           <div style={{
             marginTop: "24px",
             padding: "16px",
-            background: "rgba(102, 126, 234, 0.1)",
-            border: "1px solid rgba(102, 126, 234, 0.3)",
+            background: "rgba(102,192,244,0.12)",
+            border: "1px solid rgba(102,192,244,0.35)",
             borderRadius: "8px",
             fontSize: "16px"
           }}>
-            <strong>📂 {projectName}</strong>
+            <strong style={{ color: "#9cc9f5" }}>{projectName}</strong>
           </div>
         )}
       </div>

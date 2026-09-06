@@ -428,15 +428,15 @@ export default function DiagramEditor() {
   if (!user || !project) {
     return (
       <div style={{ 
-        color: "#fff", 
+        color: "#8f98a0", 
         padding: 16, 
-        background: "#1e1e2f", 
+        background: "#1b2838", 
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center"
       }}>
-        🔄 Cargando editor...
+        Cargando editor...
       </div>
     );
   }
@@ -2265,27 +2265,26 @@ export default function DiagramEditor() {
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", position: "relative" }}>
-      {/* 📋 TÍTULO DEL PROYECTO EN EL HEADER */}
+      {/* TÍTULO DEL PROYECTO EN EL HEADER */}
       <div
         style={{
           position: "absolute",
           top: 10,
           left: "50%",
           transform: "translateX(-50%)",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "#4da6e0",
           color: "#fff",
           padding: "10px 24px",
           borderRadius: 8,
           fontWeight: "bold",
           fontSize: 16,
           zIndex: 998,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          boxShadow: "0 2px 8px rgba(102,192,244,0.35)",
           display: "flex",
           alignItems: "center",
           gap: 8
         }}
       >
-        <span style={{ fontSize: 18 }}>📐</span>
         {project?.name || "Diagrama ER"}
       </div>
 
@@ -2303,13 +2302,14 @@ export default function DiagramEditor() {
             position: "absolute",
             top: 10,
             left: 10,
-            background: "#333",
-            color: "#fff",
-            border: "1px solid #555",
+            background: "#171a21",
+            color: "#c7d5e0",
+            border: "1px solid #2c3a48",
             padding: "6px 12px",
             borderRadius: 6,
             cursor: "pointer",
             zIndex: 999,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.3)"
           }}
         >
           ← Cerrar proyecto
@@ -2323,20 +2323,21 @@ export default function DiagramEditor() {
             position: "absolute",
             top: 10,
             right: 10,
-            background: "#222",
-            color: "#fff",
+            background: "#171a21",
+            color: "#c7d5e0",
             padding: "12px 16px",
             borderRadius: 8,
             zIndex: 999,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            border: "1px solid #2c3a48",
             maxWidth: "300px"
           }}
         >
           <p style={{ margin: "0 0 8px 0", fontSize: "14px" }}>
             {isGuest ? (
-              <>�️ Estás viendo como <b>INVITADO</b></>
+              <>Estás viendo como <b>INVITADO</b></>
             ) : (
-              <>�👀 Estás viendo el proyecto como <b>VIEWER</b></>
+              <>Estás viendo el proyecto como <b>VIEWER</b></>
             )}
           </p>
           <button
@@ -2353,7 +2354,7 @@ export default function DiagramEditor() {
               }
             }}
             style={{
-              background: "#007bff",
+              background: "#4da6e0",
               border: "none",
               padding: "6px 12px",
               borderRadius: 4,
@@ -2364,7 +2365,7 @@ export default function DiagramEditor() {
               width: "100%"
             }}
           >
-            🔐 Iniciar sesión para editar
+            Iniciar sesión para editar
           </button>
         </div>
       )}
@@ -2372,21 +2373,23 @@ export default function DiagramEditor() {
       {/* Header */}
       <div style={{ 
         padding: "12px 20px", 
-        background: "#111", 
-        color: "#fff",
+        background: "#12161c", 
+        color: "#c7d5e0",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        borderBottom: "1px solid #333"
+        borderBottom: "1px solid #2c3a48"
       }}>
         <div style={{ flex: 1 }}>
-          <strong style={{ fontSize: "16px" }}>🧩 {project.name}</strong>
-          <span style={{ marginLeft: 16, opacity: 0.7 }}>
-            👤 {user.name} · <span style={{ 
+          <strong style={{ fontSize: "16px", color: "#e6edf3" }}>{project.name}</strong>
+          <span style={{ marginLeft: 16, color: "#8f98a0" }}>
+            {user.name} · <span style={{ 
               padding: "2px 6px", 
-              background: userRole === "OWNER" ? "#4CAF50" : userRole === "EDITOR" ? "#2196F3" : "#757575",
+              background: userRole === "OWNER" ? "rgba(34,197,94,0.15)" : userRole === "EDITOR" ? "rgba(102,192,244,0.15)" : "#2c3a48",
+              color: userRole === "OWNER" ? "#a5d96a" : userRole === "EDITOR" ? "#9cc9f5" : "#b8c7d4",
               borderRadius: "4px",
-              fontSize: "12px"
+              fontSize: "12px",
+              fontWeight: 600
             }}>{userRole}</span>
           </span>
         </div>
@@ -2397,16 +2400,18 @@ export default function DiagramEditor() {
             display: "flex", 
             gap: "6px", 
             alignItems: "center",
-            background: "#1b1b1b",
+            background: "#171a21",
             padding: "4px 10px",
-            borderRadius: "6px"
+            borderRadius: "6px",
+            border: "1px solid #2c3a48"
           }}>
-            <span style={{ fontSize: "12px", opacity: 0.7 }}>👥 Online:</span>
+            <span style={{ fontSize: "12px", color: "#8f98a0" }}>Online:</span>
             {onlineUsers.map((u) => (
               <span
                 key={u.userId}
                 style={{
-                  background: u.role === "OWNER" ? "#007bff" : u.role === "EDITOR" ? "#28a745" : "#6c757d",
+                  background: u.role === "OWNER" ? "rgba(34,197,94,0.15)" : u.role === "EDITOR" ? "rgba(102,192,244,0.15)" : "#2c3a48",
+                  color: u.role === "OWNER" ? "#a5d96a" : u.role === "EDITOR" ? "#9cc9f5" : "#b8c7d4",
                   borderRadius: "12px",
                   padding: "2px 8px",
                   fontSize: "0.75em",
@@ -2422,7 +2427,7 @@ export default function DiagramEditor() {
             )}
           </div>
           
-          <span style={{ opacity: 0.7, fontSize: "14px" }}>
+          <span style={{ color: "#8f98a0", fontSize: "14px" }}>
             WebSocket: {isConnected ? "🟢" : "🔴"}
           </span>
         </div>
@@ -2431,7 +2436,7 @@ export default function DiagramEditor() {
       {/* React Flow Canvas con Sidebar izquierdo y PropertiesPanel derecho */}
       <div style={{ 
         flex: 1, 
-        background: "#0f0f0f", 
+        background: "#1b2838", 
         position: "relative", 
         display: "flex",
         overflow: "hidden",
@@ -2505,11 +2510,12 @@ export default function DiagramEditor() {
             attributionPosition="bottom-left"
           >
             <MiniMap 
-              nodeColor={() => "#666"}
-              maskColor="rgba(0, 0, 0, 0.6)"
+              nodeColor={() => "#66c0f4"}
+              maskColor="rgba(27, 40, 56, 0.85)"
+              style={{ background: "#171a21", border: "1px solid #2c3a48" }}
             />
             <Controls />
-            <Background gap={16} color="#333" />
+            <Background gap={20} color="#2c3a48" />
             <DownloadButton />
             
             {/* SVG Markers para UML 2.5 y Crow's Foot */}

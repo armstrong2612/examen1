@@ -330,7 +330,7 @@ export function AIPromptBar({
 
   return (
     <>
-      {/* Barra compacta tipo ChatGPT */}
+      {/* Barra compacta */}
       <div
         style={{
           position: "fixed",
@@ -348,17 +348,16 @@ export function AIPromptBar({
             style={{
               marginBottom: 8,
               padding: "8px 16px",
-              background: "rgba(220, 38, 38, 0.95)",
+              background: "#dc4b4b",
               borderRadius: 8,
               color: "#fff",
               fontSize: 13,
               display: "flex",
               alignItems: "center",
               gap: 8,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             }}
           >
-            <span>⚠️</span>
             <span>{error}</span>
           </div>
         )}
@@ -368,11 +367,11 @@ export function AIPromptBar({
           style={{
             display: "flex",
             alignItems: "center",
-            background: "#1c1c1c",
+            background: "#171a21",
             borderRadius: 24,
             padding: "8px 12px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-            border: "1px solid #333",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+            border: "1px solid #2c3a48",
             gap: 8,
           }}
         >
@@ -384,7 +383,7 @@ export function AIPromptBar({
             onKeyDown={handleKeyDown}
             placeholder={
               isRecording
-                ? "🎤 Escuchando..."
+                ? "Escuchando..."
                 : 'Ej: "Crea tabla cliente con id, nombre, email..."'
             }
             disabled={loading || disabled || isRecording}
@@ -394,7 +393,7 @@ export function AIPromptBar({
               background: "transparent",
               border: "none",
               outline: "none",
-              color: "#fff",
+              color: "#c7d5e0",
               fontSize: 14,
               padding: "8px 12px",
             }}
@@ -404,7 +403,7 @@ export function AIPromptBar({
           <span
             style={{
               fontSize: 11,
-              color: prompt.length > 450 ? "#ef4444" : "#666",
+              color: prompt.length > 450 ? "#dc4b4b" : "#8f98a0",
               whiteSpace: "nowrap",
             }}
           >
@@ -429,14 +428,20 @@ export function AIPromptBar({
               background: "transparent",
               border: "none",
               cursor: loading || disabled ? "not-allowed" : "pointer",
-              fontSize: 20,
-              padding: "4px 8px",
+              padding: "6px 8px",
               transition: "all 0.2s",
               opacity: loading || disabled ? 0.3 : 1,
-            }}
-            title="Analizar imagen de diagrama"
+display: "flex",
+                alignItems: "center",
+                color: "#8f98a0",
+                borderRadius: 8,
+              }}
+              title="Analizar imagen de diagrama"
           >
-            📷
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
           </button>
 
           {/* Botón de micrófono (solo si está soportado) */}
@@ -449,14 +454,22 @@ export function AIPromptBar({
                 background: "transparent",
                 border: "none",
                 cursor: loading || disabled ? "not-allowed" : "pointer",
-                fontSize: 20,
-                padding: "4px 8px",
+                padding: "6px 8px",
                 transition: "all 0.2s",
                 opacity: loading || disabled ? 0.3 : 1,
+                display: "flex",
+                alignItems: "center",
+                color: isRecording ? "#dc4b4b" : "#8f98a0",
+                borderRadius: 8,
               }}
               title={isRecording ? "Detener grabación" : "Grabar con voz"}
             >
-              {isRecording ? "🔴" : "🎤"}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
             </button>
           )}
 
@@ -468,9 +481,9 @@ export function AIPromptBar({
             style={{
               background:
                 loading || disabled || !prompt.trim() || isRecording
-                  ? "#333"
-                  : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              color: "#fff",
+                  ? "#2c3a48"
+                  : "#66c0f4",
+              color: loading || disabled || !prompt.trim() || isRecording ? "#6b7989" : "#fff",
               border: "none",
               borderRadius: 16,
               padding: "8px 20px",
@@ -505,7 +518,10 @@ export function AIPromptBar({
               </>
             ) : (
               <>
-                <span>✨</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
                 <span>Generar</span>
               </>
             )}
@@ -518,20 +534,23 @@ export function AIPromptBar({
             style={{
               marginTop: 8,
               padding: "6px 16px",
-              background: "rgba(0,0,0,0.7)",
+              background: "#171a21",
               borderRadius: 8,
-              color: "#aaa",
+              color: "#8f98a0",
               fontSize: 11,
               textAlign: "center",
+              border: "1px solid #2c3a48",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
             }}
           >
-            💡 Presiona{" "}
+            Presiona{" "}
             <kbd
               style={{
-                background: "#333",
+                background: "#2c3a48",
                 padding: "2px 6px",
                 borderRadius: 4,
                 fontFamily: "monospace",
+                border: "1px solid #42596e",
               }}
             >
               Enter
@@ -543,12 +562,13 @@ export function AIPromptBar({
                 o{" "}
                 <kbd
                   style={{
-                    background: "#333",
+                    background: "#2c3a48",
                     padding: "2px 6px",
                     borderRadius: 4,
+                    border: "1px solid #42596e",
                   }}
                 >
-                  🎤
+                  mic
                 </kbd>{" "}
                 para dictar
               </>

@@ -35,27 +35,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
       top: 0,
       bottom: 0,
       width: 280,
-      background: "#1a1a1a",
-      borderRight: "1px solid #333",
+      background: "#171a21",
+      borderRight: "1px solid #2c3a48",
       display: "flex",
       flexDirection: "column",
       zIndex: 10,
-      color: "#fff",
+      color: "#c7d5e0",
       fontFamily: "system-ui, -apple-system, sans-serif"
     }}>
       {/* Header */}
       <div style={{
         padding: "16px",
-        borderBottom: "1px solid #333",
-        background: "#222"
+        borderBottom: "1px solid #2c3a48",
+        background: "#12161c"
       }}>
         <h3 style={{ 
           margin: "0 0 12px 0", 
-          fontSize: "16px", 
+          fontSize: "15px", 
           fontWeight: "600",
+          color: "#e6edf3",
           letterSpacing: "0.3px"
         }}>
-          🏗️ Diagrama ER - UML 2.5
+          Diagrama ER - UML 2.5
         </h3>
         
         {/* Botón Toggle Vista */}
@@ -64,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           title={viewMode === "SQL" ? "Cambiar a vista UML 2.5 (oculta FKs y muestra tipos abstractos)" : "Cambiar a vista SQL (muestra FKs y tipos de BD)"}
           style={{
             width: "100%",
-            background: viewMode === "UML" ? "linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)" : "linear-gradient(135deg, #3498db 0%, #2980b9 100%)",
+            background: viewMode === "UML" ? "#69983a" : "#66c0f4",
             color: "#fff",
             border: "none",
             padding: "8px 12px",
@@ -76,10 +77,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
-            transition: "all 0.2s ease"
+            transition: "background 0.2s ease"
           }}
         >
-          <span style={{ fontSize: "14px" }}>{viewMode === "UML" ? "📐" : "🗄️"}</span>
           Vista: {viewMode === "UML" ? "UML 2.5" : "SQL"}
         </button>
       </div>
@@ -87,33 +87,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Stats */}
       <div style={{
         padding: "12px 16px",
-        borderBottom: "1px solid #2a2a2a",
+        borderBottom: "1px solid #2c3a48",
         display: "flex",
         gap: 16,
         fontSize: "13px"
       }}>
         <div style={{ flex: 1 }}>
-          <div style={{ opacity: 0.6, fontSize: "11px", marginBottom: 4 }}>Tablas</div>
-          <div style={{ fontSize: "20px", fontWeight: "bold", color: "#667eea" }}>
+          <div style={{ color: "#8f98a0", fontSize: "11px", marginBottom: 4 }}>Tablas</div>
+          <div style={{ fontSize: "20px", fontWeight: "bold", color: "#66c0f4" }}>
             {tableNodes.length}
           </div>
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ opacity: 0.6, fontSize: "11px", marginBottom: 4 }}>Relaciones</div>
-          <div style={{ fontSize: "20px", fontWeight: "bold", color: "#764ba2" }}>
+          <div style={{ color: "#8f98a0", fontSize: "11px", marginBottom: 4 }}>Relaciones</div>
+          <div style={{ fontSize: "20px", fontWeight: "bold", color: "#8fb3d9" }}>
             {edges.length}
           </div>
         </div>
       </div>
 
       {/* Action buttons */}
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid #2a2a2a" }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid #2c3a48" }}>
         <button 
           onClick={onAddNode}
           style={{
             width: "100%",
             padding: "10px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "#66c0f4",
             border: "none",
             borderRadius: 6,
             color: "#fff",
@@ -121,12 +121,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             cursor: "pointer",
             fontSize: "13px",
             marginBottom: 8,
-            transition: "transform 0.1s"
+            transition: "transform 0.1s, background 0.2s"
           }}
+          onMouseOver={(e) => e.currentTarget.style.background = "#4da6e0"}
+          onMouseOut={(e) => e.currentTarget.style.background = "#66c0f4"}
           onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
           onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
         >
-          ➕ Nueva Tabla
+          Nueva Tabla
         </button>
         
         <button 
@@ -134,10 +136,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           style={{
             width: "100%",
             padding: "10px",
-            background: "#2c2c2c",
-            border: "1px solid #444",
+            background: "#12161c",
+            border: "1px solid #2c3a48",
             borderRadius: 6,
-            color: "#aaa",
+            color: "#b8c7d4",
             fontWeight: "600",
             cursor: "pointer",
             fontSize: "13px",
@@ -145,15 +147,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             transition: "all 0.1s"
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#333";
-            e.currentTarget.style.color = "#fff";
+            e.currentTarget.style.background = "#2c3a48";
+            e.currentTarget.style.borderColor = "#42596e";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#2c2c2c";
-            e.currentTarget.style.color = "#aaa";
+            e.currentTarget.style.background = "#12161c";
+            e.currentTarget.style.borderColor = "#2c3a48";
           }}
         >
-          💾 Exportar SQL
+          Exportar SQL
         </button>
 
         <button 
@@ -161,10 +163,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           style={{
             width: "100%",
             padding: "10px",
-            background: "#2c2c2c",
-            border: "1px solid #444",
+            background: "#12161c",
+            border: "1px solid #2c3a48",
             borderRadius: 6,
-            color: "#aaa",
+            color: "#b8c7d4",
             fontWeight: "600",
             cursor: "pointer",
             fontSize: "13px",
@@ -172,17 +174,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             transition: "all 0.1s"
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#6aaf50";
+            e.currentTarget.style.background = "#69983a";
             e.currentTarget.style.color = "#fff";
-            e.currentTarget.style.borderColor = "#6aaf50";
+            e.currentTarget.style.borderColor = "#69983a";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#2c2c2c";
-            e.currentTarget.style.color = "#aaa";
-            e.currentTarget.style.borderColor = "#444";
+            e.currentTarget.style.background = "#12161c";
+            e.currentTarget.style.color = "#b8c7d4";
+            e.currentTarget.style.borderColor = "#2c3a48";
           }}
         >
-          ☕ Exportar Spring Boot
+          Exportar Spring Boot
         </button>
 
         <button 
@@ -190,27 +192,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           style={{
             width: "100%",
             padding: "10px",
-            background: "#2c2c2c",
-            border: "1px solid #444",
+            background: "#12161c",
+            border: "1px solid #2c3a48",
             borderRadius: 6,
-            color: "#aaa",
+            color: "#b8c7d4",
             fontWeight: "600",
             cursor: "pointer",
             fontSize: "13px",
             transition: "all 0.1s"
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#42A5F5";
+            e.currentTarget.style.background = "#3aa5d8";
             e.currentTarget.style.color = "#fff";
-            e.currentTarget.style.borderColor = "#42A5F5";
+            e.currentTarget.style.borderColor = "#3aa5d8";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#2c2c2c";
-            e.currentTarget.style.color = "#aaa";
-            e.currentTarget.style.borderColor = "#444";
+            e.currentTarget.style.background = "#12161c";
+            e.currentTarget.style.color = "#b8c7d4";
+            e.currentTarget.style.borderColor = "#2c3a48";
           }}
         >
-          📱 Exportar Flutter
+          Exportar Flutter
         </button>
       </div>
 
@@ -223,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div style={{
           fontSize: "11px",
           fontWeight: "600",
-          opacity: 0.6,
+          color: "#8f98a0",
           padding: "8px 8px 4px",
           letterSpacing: "0.5px"
         }}>
@@ -234,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div style={{
             padding: "16px",
             textAlign: "center",
-            opacity: 0.5,
+            color: "#8f98a0",
             fontSize: "12px"
           }}>
             No hay tablas aún.
@@ -256,8 +258,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 style={{
                   margin: "4px 8px",
                   padding: "10px",
-                  background: isSelected ? "#2c2c2c" : "#252525",
-                  border: isSelected ? "2px solid #667eea" : "1px solid #333",
+                  background: isSelected ? "rgba(102,192,244,0.12)" : "#12161c",
+                  border: isSelected ? "1.5px solid #66c0f4" : "1px solid #2c3a48",
                   borderRadius: 6,
                   fontSize: "13px",
                   cursor: "pointer",
@@ -268,20 +270,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.background = "#2c2c2c";
-                    e.currentTarget.style.borderColor = "#667eea";
+                    e.currentTarget.style.background = "#171a21";
+                    e.currentTarget.style.borderColor = "#42596e";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.background = "#252525";
-                    e.currentTarget.style.borderColor = "#333";
+                    e.currentTarget.style.background = "#12161c";
+                    e.currentTarget.style.borderColor = "#2c3a48";
                   }
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <div style={{ fontWeight: "600", color: isSelected ? "#667eea" : "#fff", flex: 1 }}>
-                    📦 {tableName}
+                  <div style={{ fontWeight: "600", color: isSelected ? "#9cc9f5" : "#c7d5e0", flex: 1 }}>
+                    {tableName}
                   </div>
                   {onDeleteNode && (
                     <button
@@ -295,36 +297,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       style={{
                         background: "transparent",
                         border: "none",
-                        color: "#f66",
-                        fontSize: "16px",
+                        color: "#ef8383",
+                        fontSize: "14px",
                         cursor: "pointer",
                         padding: "2px 6px",
                         borderRadius: 4,
                         transition: "all 0.2s"
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#f66";
+                        e.currentTarget.style.background = "#dc4b4b";
                         e.currentTarget.style.color = "#fff";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#f66";
+                        e.currentTarget.style.color = "#ef8383";
                       }}
                       title="Eliminar tabla"
                     >
-                      🗑️
+                      ✕
                     </button>
                   )}
                 </div>
                 <div style={{ 
                   fontSize: "11px", 
-                  opacity: 0.7,
+                  color: "#8f98a0",
                   display: "flex",
                   gap: 10
                 }}>
-                  <span>📋 {fieldCount} campos</span>
-                  {pkCount > 0 && <span>🔑 {pkCount}</span>}
-                  {fkCount > 0 && <span>🔗 {fkCount}</span>}
+                  <span>{fieldCount} campos</span>
+                  {pkCount > 0 && <span>PK {pkCount}</span>}
+                  {fkCount > 0 && <span>FK {fkCount}</span>}
                 </div>
               </div>
             );
@@ -335,9 +337,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer info */}
       <div style={{
         padding: "12px 16px",
-        borderTop: "1px solid #2a2a2a",
+        borderTop: "1px solid #2c3a48",
         fontSize: "11px",
-        opacity: 0.5,
+        color: "#6b7989",
         textAlign: "center"
       }}>
         Diagrama ER - UML 2.5 Colaborativo

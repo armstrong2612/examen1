@@ -50,15 +50,16 @@ export default function UmlMultiplicityEdge({
     position: "absolute",
     fontSize: "13px",
     fontWeight: 600,
-    backgroundColor: "rgba(30, 30, 30, 0.85)",
-    color: "#fff",
+    backgroundColor: "#202a38",
+    color: "#c7d5e0",
     padding: "2px 6px",
     borderRadius: "4px",
     pointerEvents: "none",
     transform: "translate(-50%, -50%)",
     userSelect: "none",
     whiteSpace: "nowrap",
-    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.3)",
+    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.5)",
+    border: "1px solid #2c3a48",
   };
 
   return (
