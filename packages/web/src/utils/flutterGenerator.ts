@@ -416,6 +416,81 @@ ${routes}
 }
 
 /**
+ * Determina si un campo debe ser nulable en Dart
+ * (consistente entre declaración, fromJson y toJson)
+ */
+function isFieldNullable(field: Field): boolean {
+  const isIdField = field.name.toLowerCase() === 'id' && field.isPrimary;
+  const isForeignKey = field.isForeign || field.name.toLowerCase().endsWith('_id');
+  return isIdField || isForeignKey || !!field.nullable;
+}
+
+/**
+ * Genera la expresión Dart para parsear un campo en fromJson
+ * respetando la nulabilidad del campo (NOT NULL → parseo no nulable)
+ */
+function buildFromJsonExpression(jsonKey: string, baseType: string, sqlType: string, nullable: boolean): string {
+  const isTimeType = sqlType.includes('TIME') && !sqlType.includes('DATETIME') && !sqlType.includes('TIMESTAMP');
+
+  if (baseType === 'int') {
+    return nullable ? `json['${jsonKey}'] as int?` : `json['${jsonKey}'] as int`;
+  }
+  if (baseType === 'double') {
+    return nullable ? `(json['${jsonKey}'] as num?)?.toDouble()` : `(json['${jsonKey}'] as num).toDouble()`;
+  }
+  if (baseType === 'bool') {
+    return nullable ? `json['${jsonKey}'] as bool?` : `json['${jsonKey}'] as bool`;
+  }
+  if (baseType === 'DateTime') {
+    if (isTimeType) {
+      return nullable
+        ? `json['${jsonKey}'] != null ? DateTime.parse('1970-01-01 ' + (json['${jsonKey}'] as String)) : null`
+        : `DateTime.parse('1970-01-01 ' + (json['${jsonKey}'] as String))`;
+    }
+    return nullable
+      ? `json['${jsonKey}'] != null ? DateTime.parse(json['${jsonKey}'] as String) : null`
+      : `DateTime.parse(json['${jsonKey}'] as String)`;
+  }
+  return nullable ? `json['${jsonKey}'] as String?` : `json['${jsonKey}'] as String`;
+}
+
+/**
+ * Genera la expresión Dart para serializar un campo en toJson
+ * respetando la nulabilidad del campo (sin ?. innecesarios en no nulables)
+ */
+function buildToJsonExpression(fieldName: string, jsonKey: string, baseType: string, sqlType: string, nullable: boolean): string {
+  const isTimeType = sqlType.includes('TIME') && !sqlType.includes('DATETIME') && !sqlType.includes('TIMESTAMP');
+
+  if (baseType === 'DateTime') {
+    if (isTimeType) {
+      if (nullable) {
+        return `'${jsonKey}': ${fieldName} != null ? '\${${fieldName}!.hour.toString().padLeft(2, '0')}:\${${fieldName}!.minute.toString().padLeft(2, '0')}:\${${fieldName}!.second.toString().padLeft(2, '0')}' : null`;
+      }
+      return `'${jsonKey}': '\${${fieldName}.hour.toString().padLeft(2, '0')}:\${${fieldName}.minute.toString().padLeft(2, '0')}:\${${fieldName}.second.toString().padLeft(2, '0')}'`;
+    }
+    return nullable
+      ? `'${jsonKey}': ${fieldName}?.toIso8601String()`
+      : `'${jsonKey}': ${fieldName}.toIso8601String()`;
+  }
+  return `'${jsonKey}': ${fieldName}`;
+}
+
+/**
+ * Resuelve la clave JSON que usa un campo en fromJson/toJson:
+ * FKs → "<tablaReferenciada>Id" (camelCase), resto → camelCase del nombre
+ */
+function resolveJsonKey(field: Field, allTables: TableMetadata[]): string {
+  if (field.isForeign && field.references) {
+    const refTableName = field.references.toLowerCase().replace(/\s+/g, '_');
+    const refTable = allTables.find(t => t.tableName === refTableName);
+    if (refTable) {
+      return `${toCamelCase(refTable.tableName)}Id`;
+    }
+  }
+  return toCamelCase(field.name);
+}
+
+/**
  * Genera modelo Dart con HERENCIA REAL usando extends (como Spring Boot)
  */
 function generateModel(table: TableMetadata, allTables: TableMetadata[]): string {
@@ -467,24 +542,11 @@ function generateModel(table: TableMetadata, allTables: TableMetadata[]): string
   // Generar definición de campos propios
   const fields = ownFields.map(field => {
     const dartType = mapSqlToDartType(field.type || 'String');
-    const isIdField = field.name.toLowerCase() === 'id' && field.isPrimary;
     const isForeignKey = field.isForeign || field.name.toLowerCase().endsWith('_id');
+    const isNullable = isFieldNullable(field);
+    const nullable = isNullable ? '?' : '';
     
-    let nullable = '';
-    let isNullable = false;
-    
-    if (isIdField) {
-      nullable = '?';
-      isNullable = true;
-    } else if (isForeignKey) {
-      nullable = '?';
-      isNullable = true;
-    } else if (field.nullable) {
-      nullable = '?';
-      isNullable = true;
-    }
-    
-    const required = !isNullable && !field.isPrimary ? 'required ' : '';
+    const required = !isNullable ? 'required ' : '';
     
     return {
       name: toCamelCase(field.name),
@@ -518,9 +580,10 @@ function generateModel(table: TableMetadata, allTables: TableMetadata[]): string
     // Parámetros del padre (declarados pero no como this.field porque van al super)
     const parentParams = parentFields.map(pf => {
       const dartType = mapSqlToDartType(pf.type || 'String');
-      const nullable = pf.isPrimary || pf.isForeign || pf.nullable ? '?' : '';
+      const nullable = isFieldNullable(pf);
       const fieldName = toCamelCase(pf.name);
-      return `${dartType}${nullable} ${fieldName}`;
+      const required = nullable ? '' : 'required ';
+      return `${required}${dartType}${nullable ? '?' : ''} ${fieldName}`;
     }).join(', ');
     
     // Parámetros propios
@@ -547,14 +610,10 @@ function generateModel(table: TableMetadata, allTables: TableMetadata[]): string
   // 🎯 Construir mapa de FKs para usar nombres correctos en JSON
   const fkJsonKeyMap = new Map<string, string>();
   allFieldsForJson.forEach(field => {
+    const jsonKey = resolveJsonKey(field, allTables);
+    fkJsonKeyMap.set(field.name, jsonKey);
     if (field.isForeign && field.references) {
-      const refTableName = field.references.toLowerCase().replace(/\s+/g, '_');
-      const refTable = allTables.find(t => t.tableName === refTableName);
-      if (refTable) {
-        const jsonKey = `${toCamelCase(refTable.tableName)}Id`;
-        fkJsonKeyMap.set(field.name, jsonKey);
-        console.log(`🔧 [Flutter Model] FK ${field.name} → JSON key: "${jsonKey}"`);
-      }
+      console.log(`🔧 [Flutter Model] FK ${field.name} → JSON key: "${jsonKey}"`);
     }
   });
   
@@ -564,23 +623,9 @@ function generateModel(table: TableMetadata, allTables: TableMetadata[]): string
     const jsonKey = fkJsonKeyMap.get(field.name) || toCamelCase(field.name);
     const baseType = mapSqlToDartType(field.type || 'String');
     const sqlType = (field.type || '').toUpperCase();
+    const nullable = isFieldNullable(field);
     
-    if (baseType === 'int') {
-      return `      ${fieldName}: json['${jsonKey}'] as int?,`;
-    } else if (baseType === 'double') {
-      return `      ${fieldName}: (json['${jsonKey}'] as num?)?.toDouble(),`;
-    } else if (baseType === 'bool') {
-      return `      ${fieldName}: json['${jsonKey}'] as bool?,`;
-    } else if (baseType === 'DateTime') {
-      // Si es TIME, parsear como "1970-01-01 HH:mm:ss" o usar el string tal cual
-      if (sqlType.includes('TIME') && !sqlType.includes('DATETIME') && !sqlType.includes('TIMESTAMP')) {
-        return `      ${fieldName}: json['${jsonKey}'] != null ? DateTime.parse('1970-01-01 ' + json['${jsonKey}']) : null,`;
-      } else {
-        return `      ${fieldName}: json['${jsonKey}'] != null ? DateTime.parse(json['${jsonKey}']) : null,`;
-      }
-    } else {
-      return `      ${fieldName}: json['${jsonKey}'] as String?,`;
-    }
+    return `      ${fieldName}: ${buildFromJsonExpression(jsonKey, baseType, sqlType, nullable)},`;
   }).join('\n');
   
   // toJson - Si hereda, usar super.toJson() y agregar campos propios
@@ -593,17 +638,9 @@ function generateModel(table: TableMetadata, allTables: TableMetadata[]): string
       const jsonKey = fkJsonKeyMap.get(field.name) || toCamelCase(field.name);
       const baseType = mapSqlToDartType(field.type || 'String');
       const sqlType = (field.type || '').toUpperCase();
+      const nullable = isFieldNullable(field);
       
-      if (baseType === 'DateTime') {
-        // Si es TIME, formatear solo la hora
-        if (sqlType.includes('TIME') && !sqlType.includes('DATETIME') && !sqlType.includes('TIMESTAMP')) {
-          return `      '${jsonKey}': ${fieldName} != null ? '\${${fieldName}!.hour.toString().padLeft(2, '0')}:\${${fieldName}!.minute.toString().padLeft(2, '0')}:\${${fieldName}!.second.toString().padLeft(2, '0')}' : null,`;
-        } else {
-          return `      '${jsonKey}': ${fieldName}?.toIso8601String(),`;
-        }
-      } else {
-        return `      '${jsonKey}': ${fieldName},`;
-      }
+      return `      ${buildToJsonExpression(fieldName, jsonKey, baseType, sqlType, nullable)},`;
     }).join('\n');
     
     toJsonBody = `    return {
@@ -618,17 +655,9 @@ ${ownToJsonFields}
       const jsonKey = fkJsonKeyMap.get(field.name) || toCamelCase(field.name);
       const baseType = mapSqlToDartType(field.type || 'String');
       const sqlType = (field.type || '').toUpperCase();
+      const nullable = isFieldNullable(field);
       
-      if (baseType === 'DateTime') {
-        // Si es TIME, formatear solo la hora
-        if (sqlType.includes('TIME') && !sqlType.includes('DATETIME') && !sqlType.includes('TIMESTAMP')) {
-          return `      '${jsonKey}': ${fieldName} != null ? '\${${fieldName}!.hour.toString().padLeft(2, '0')}:\${${fieldName}!.minute.toString().padLeft(2, '0')}:\${${fieldName}!.second.toString().padLeft(2, '0')}' : null,`;
-        } else {
-          return `      '${jsonKey}': ${fieldName}?.toIso8601String(),`;
-        }
-      } else {
-        return `      '${jsonKey}': ${fieldName},`;
-      }
+      return `      ${buildToJsonExpression(fieldName, jsonKey, baseType, sqlType, nullable)},`;
     }).join('\n');
     
     toJsonBody = `    return {
@@ -665,8 +694,7 @@ ${fromJsonFields}
     );
   }
 
-  @override
-  Map<String, dynamic> toJson() {
+  ${table.parentClass && parentFields.length > 0 ? '  @override\n' : ''}  Map<String, dynamic> toJson() {
 ${toJsonBody}
   }
 
@@ -686,18 +714,20 @@ ${copyWithArgs}
  */
 function generateApiService(tables: TableMetadata[]): string {
   const mockData = tables.map(table => {
-    const sampleData = generateSampleData(table);
+    const sampleData = generateSampleData(table, tables);
     return `  // Mock data para ${table.className}
   static List<Map<String, dynamic>> _${table.tableName}Mock = ${JSON.stringify(sampleData, null, 4)};`;
   }).join('\n\n');
 
   const methods = tables.map(table => {
-    const pkField = table.primaryKey?.name || 'id';
+    // 🎯 Usar clave JSON de la PK (<tabla>Id / camelCase) para coincidir con el mock/fromJson
+    const pkField = table.primaryKey ? resolveJsonKey(table.primaryKey, tables) : 'id';
     const isJoinTable = table.needsCompositeKey;
     
     if (isJoinTable) {
-      const fk1Name = table.foreignKeys[0].name;
-      const fk2Name = table.foreignKeys[1].name;
+      // 🎯 Usar claves JSON (camelCase, "<tabla>Id") para coincidir con el mock/fromJson
+      const fk1Name = resolveJsonKey(table.foreignKeys[0], tables);
+      const fk2Name = resolveJsonKey(table.foreignKeys[1], tables);
       
       return `
   // ==================== ${table.className} (Tabla Intermedia) ====================
@@ -881,30 +911,45 @@ ${methods}
 /**
  * Genera datos de ejemplo para mock
  */
-function generateSampleData(table: TableMetadata): any[] {
-  const pkField = table.primaryKey?.name || 'id';
+function generateSampleData(table: TableMetadata, allTables: TableMetadata[]): any[] {
+  // 🎯 Si hereda, incluir campos del padre en el mock (el modelo los exige)
+  let fields = [...table.fields];
+  if (table.parentTable) {
+    const parentMeta = allTables.find(t => t.tableName === table.parentTable);
+    if (parentMeta) {
+      fields = [...parentMeta.fields.filter(f => !f.isMethod), ...table.fields];
+    }
+  }
   
   return [1, 2].map(id => {
     const item: any = {};
-    table.fields.forEach(field => {
+    fields.forEach(field => {
+      // 🎯 Usar la MISMA clave JSON que fromJson/toJson (camelCase, "<tabla>Id" para FKs)
+      const jsonKey = resolveJsonKey(field, allTables);
+      const sqlType = (field.type || '').toUpperCase();
+      const isTimeType = sqlType.includes('TIME') && !sqlType.includes('DATETIME') && !sqlType.includes('TIMESTAMP');
+      
       if (field.isPrimary && field.name.toLowerCase() === 'id') {
         // IDs autogenerados
-        item[field.name] = id;
+        item[jsonKey] = id;
       } else if (field.isForeign) {
         // FKs: usar valores válidos (asumimos que existen registros 1 y 2)
-        item[field.name] = id;
+        item[jsonKey] = id;
       } else {
         const dartType = mapSqlToDartType(field.type || 'String');
         if (dartType === 'String') {
-          item[field.name] = `${field.name}_${id}`;
+          item[jsonKey] = `${field.name}_${id}`;
         } else if (dartType === 'int') {
-          item[field.name] = id * 10;
+          item[jsonKey] = id * 10;
         } else if (dartType === 'double') {
-          item[field.name] = id * 10.5;
+          item[jsonKey] = id * 10.5;
         } else if (dartType === 'bool') {
-          item[field.name] = id % 2 === 0;
+          item[jsonKey] = id % 2 === 0;
         } else if (dartType === 'DateTime') {
-          item[field.name] = new Date().toISOString();
+          // Columnas TIME requieren solo "HH:mm:ss" (fromJson antepone "1970-01-01 ")
+          item[jsonKey] = isTimeType
+            ? `${(id * 3).toString().padStart(2, '0')}:${(id * 15).toString().padStart(2, '0')}:00`
+            : new Date().toISOString();
         }
       }
     });
