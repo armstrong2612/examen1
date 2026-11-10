@@ -195,6 +195,7 @@ Herramienta integral para acelerar el desarrollo de sistemas de gestión mediant
     - **Testing:** Guía completa en `TESTING_GUIDE.md` (600+ líneas)
   - **Chat compartido con moderador IA**
     - OWNER, EDITOR y VIEWER consultan al moderador desde el editor; visitantes requieren una invitación válida
+    - Dictado por voz en español en el campo del chat, con controles de iniciar/detener y mensajes de compatibilidad/permisos del micrófono
     - Preguntas y respuestas se guardan por proyecto y se transmiten al equipo por Socket.IO
     - El moderador usa el diagrama guardado y hasta 20 mensajes recientes como contexto
     - El chat recomienda y explica; no modifica el diagrama
