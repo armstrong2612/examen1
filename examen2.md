@@ -9,6 +9,7 @@ El moderador usa GPT-4o-mini para brindar recomendaciones en español basadas en
 ## Funcionalidad del chat
 
 - Se agregó `AIChatPanel`, un panel flotante con el estado de conexión, la conversación, el indicador de respuesta pendiente y el formulario para enviar preguntas.
+- Se agregó dictado por voz en español en el campo del chat, con controles para iniciar/detener y mensajes de error para navegadores sin soporte o micrófonos sin permiso. La transcripción se agrega al texto escrito y respeta el límite de 2 000 caracteres.
 - Cada pregunta identifica al autor con su nombre obtenido y validado por el servidor. Las respuestas aparecen como “Moderador IA”.
 - Las preguntas y respuestas se persisten en PostgreSQL y se difunden a los participantes de la sala del proyecto con Socket.IO.
 - Al entrar o reconectarse, el panel solicita el historial. Se cargan hasta 100 mensajes para mostrar la conversación; para crear la respuesta se consideran hasta 20 mensajes anteriores.
@@ -114,6 +115,7 @@ El servicio `answerProjectQuestion` envía el diagrama como contexto de sistema,
 - El inicio del contenedor confirmó que Prisma sincronizó el esquema.
 - Se consultó el modelo `aiConversation` desde Prisma en el contenedor en ejecución.
 - El endpoint `/health` respondió HTTP 200 con `{"status":"ok"}`.
+- El dictado usa Web Speech API (`SpeechRecognition` o `webkitSpeechRecognition`); para probarlo hace falta un navegador compatible y conceder permiso de micrófono.
 - No se verificó una conversación completa contra OpenAI; esa prueba requiere que `OPENAI_API_KEY` sea válida, esté cargada en Docker y tenga acceso al modelo.
 - Vite mostró advertencias preexistentes sobre el tamaño de un bundle y un módulo importado estática y dinámicamente; el build final terminó correctamente.
 

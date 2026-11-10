@@ -17,6 +17,23 @@ interface AIChatPanelProps {
   userId: string;
 }
 
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: {
+    resultIndex: number;
+    results: ArrayLike<ArrayLike<{ transcript: string }>>;
+  }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
 export function AIChatPanel({ socket, projectId, userId }: AIChatPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
@@ -25,8 +42,66 @@ export function AIChatPanel({ socket, projectId, userId }: AIChatPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(socket?.connected ?? false);
   const [joinedProjectId, setJoinedProjectId] = useState<string | null>(null);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const questionRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const ready = connected && joinedProjectId === projectId;
+
+  useEffect(() => {
+    const speechWindow = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      setSpeechSupported(false);
+      return;
+    }
+
+    setSpeechSupported(true);
+    const recognition = new Recognition();
+    recognition.lang = "es-ES";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(
+        { length: event.results.length - event.resultIndex },
+        (_, index) => event.results[event.resultIndex + index][0]?.transcript ?? ""
+      ).join(" ").trim();
+
+      if (!transcript) return;
+      const current = questionRef.current;
+      const separator = current.trim() && current.length < 2000 ? " " : "";
+      const remainingCharacters = Math.max(2000 - current.length - separator.length, 0);
+      if (transcript.length > remainingCharacters) {
+        setError("La transcripción supera el límite de 2000 caracteres.");
+      } else {
+        setError(null);
+      }
+      const nextQuestion = `${current}${remainingCharacters > 0 ? separator : ""}${transcript.slice(0, remainingCharacters)}`;
+      questionRef.current = nextQuestion;
+      setQuestion(nextQuestion);
+    };
+    recognition.onerror = (event) => {
+      const message = event.error === "not-allowed" || event.error === "service-not-allowed"
+        ? "Permite el acceso al micrófono en el navegador para dictar."
+        : event.error === "no-speech"
+          ? "No se detectó voz. Intenta hablar de nuevo."
+          : `Error de reconocimiento de voz: ${event.error}`;
+      setError(message);
+      setIsRecording(false);
+    };
+    recognition.onend = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!socket) {
@@ -110,6 +185,7 @@ export function AIChatPanel({ socket, projectId, userId }: AIChatPanelProps) {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (isRecording) recognitionRef.current?.stop();
     const trimmedQuestion = question.trim();
 
     if (!socket?.connected || !ready) {
@@ -123,8 +199,32 @@ export function AIChatPanel({ socket, projectId, userId }: AIChatPanelProps) {
 
     setPendingRequests((current) => new Set(current).add(requestId));
     setError(null);
+    questionRef.current = "";
     setQuestion("");
     socket.emit("ai-chat-send", { message: trimmedQuestion, requestId });
+  };
+
+  const handleMicrophoneClick = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) {
+      setError("Tu navegador no admite dictado por voz. Prueba con Chrome o Edge.");
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      return;
+    }
+
+    try {
+      setError(null);
+      recognition.start();
+      setIsRecording(true);
+    } catch (recognitionError) {
+      console.error("[ai-chat] Could not start speech recognition:", recognitionError);
+      setError("No se pudo iniciar el micrófono. Comprueba los permisos del navegador.");
+      setIsRecording(false);
+    }
   };
 
   const isOwnMessage = (message: AIChatMessage) =>
@@ -240,9 +340,12 @@ export function AIChatPanel({ socket, projectId, userId }: AIChatPanelProps) {
             <input
               aria-label="Pregunta para el moderador de IA"
               value={question}
-              onChange={(event) => setQuestion(event.target.value)}
+              onChange={(event) => {
+                questionRef.current = event.target.value;
+                setQuestion(event.target.value);
+              }}
               maxLength={2000}
-              placeholder="Escribe una pregunta…"
+              placeholder={isRecording ? "Escuchando…" : "Escribe o dicta una pregunta…"}
               style={{
                 minWidth: 0,
                 flex: 1,
@@ -254,6 +357,44 @@ export function AIChatPanel({ socket, projectId, userId }: AIChatPanelProps) {
                 outline: "none",
               }}
             />
+            <button
+              type="button"
+              onClick={handleMicrophoneClick}
+              disabled={!speechSupported || !ready}
+              aria-label={isRecording ? "Detener dictado" : "Dictar pregunta"}
+              aria-pressed={isRecording}
+              title={
+                !speechSupported
+                  ? "El dictado por voz no está disponible en este navegador"
+                  : isRecording ? "Detener dictado" : "Dictar pregunta en español"
+              }
+              style={{
+                width: 40,
+                flexShrink: 0,
+                color: isRecording ? "#ff7b72" : "#c7d5e0",
+                background: isRecording ? "#3d2024" : "#26323e",
+                border: `1px solid ${isRecording ? "#8e3b46" : "#394b59"}`,
+                borderRadius: 8,
+                cursor: speechSupported && ready ? "pointer" : "not-allowed",
+                opacity: speechSupported && ready ? 1 : 0.5,
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                style={{ verticalAlign: "middle" }}
+              >
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" />
+              </svg>
+            </button>
             <button
               type="submit"
               disabled={!question.trim() || !ready}
