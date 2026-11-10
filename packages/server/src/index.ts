@@ -7,6 +7,7 @@ import helmet from "helmet";
 import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { ensureUserExists } from "./utils/ensureUserExists.js";
+import { answerProjectQuestion } from "./services/aiService.js";
 
 import sessionsRouter from "./routes/sessions.js";
 import locksRouter from "./routes/locks.js";
@@ -24,6 +25,125 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
 });
+
+interface ProjectSocketAccess {
+  userId: string;
+  name: string;
+  role: "OWNER" | "EDITOR" | "VIEWER";
+  isGuest: boolean;
+}
+
+async function resolveProjectSocketAccess(
+  userId: string,
+  projectId: string,
+  invitationToken: string | undefined,
+  socketId: string
+): Promise<ProjectSocketAccess | null> {
+  if (userId.startsWith("guest_")) {
+    if (!invitationToken) return null;
+
+    const invitation = await prisma.invitation.findUnique({
+      where: { token: invitationToken },
+      select: { projectId: true },
+    });
+
+    if (!invitation || invitation.projectId !== projectId) return null;
+
+    return {
+      userId: `guest:${socketId}`,
+      name: `Invitado ${socketId.slice(-4)}`,
+      role: "VIEWER",
+      isGuest: true,
+    };
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      ownerId: true,
+      owner: { select: { name: true } },
+      users: {
+        where: { userId },
+        select: {
+          role: true,
+          user: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  if (!project) return null;
+
+  const membership = project.users[0];
+  if (project.ownerId !== userId && !membership) return null;
+
+  return {
+    userId,
+    name: project.ownerId === userId ? project.owner.name : membership!.user.name,
+    role: project.ownerId === userId ? "OWNER" : membership!.role,
+    isGuest: false,
+  };
+}
+
+function getDiagramContext(data: unknown): string {
+  if (!data || typeof data !== "object") return "El proyecto todavía no tiene un diagrama guardado.";
+
+  const diagram = data as Record<string, unknown>;
+  const nodes = Array.isArray(diagram.nodes) ? diagram.nodes : [];
+  const edges = Array.isArray(diagram.edges) ? diagram.edges : [];
+  const nodeNames = new Map<string, string>();
+
+  const tables = nodes.slice(0, 40).map((value) => {
+    const node = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const nodeData = node.data && typeof node.data === "object"
+      ? node.data as Record<string, unknown>
+      : {};
+    const id = typeof node.id === "string" ? node.id : "";
+    const name = typeof nodeData.name === "string"
+      ? nodeData.name
+      : typeof nodeData.label === "string" ? nodeData.label : "Tabla sin nombre";
+    if (id) nodeNames.set(id, name);
+
+    const fields = Array.isArray(nodeData.fields) ? nodeData.fields : [];
+    return {
+      name,
+      fields: fields.slice(0, 30).map((fieldValue) => {
+        const field = fieldValue && typeof fieldValue === "object"
+          ? fieldValue as Record<string, unknown>
+          : {};
+        return {
+          name: field.name,
+          type: field.type,
+          primary: field.isPrimary,
+          foreign: field.isForeign,
+          references: field.references,
+        };
+      }),
+    };
+  });
+
+  const relations = edges.slice(0, 80).map((value) => {
+    const edge = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const edgeData = edge.data && typeof edge.data === "object"
+      ? edge.data as Record<string, unknown>
+      : {};
+    return {
+      from: typeof edge.source === "string" ? nodeNames.get(edge.source) ?? edge.source : undefined,
+      to: typeof edge.target === "string" ? nodeNames.get(edge.target) ?? edge.target : undefined,
+      type: edgeData.relationType,
+      multiplicity: edgeData.sourceMultiplicity && edgeData.targetMultiplicity
+        ? `${String(edgeData.sourceMultiplicity)} - ${String(edgeData.targetMultiplicity)}`
+        : undefined,
+    };
+  });
+
+  const context = JSON.stringify({
+    tables,
+    relations,
+    truncated: nodes.length > 40 || edges.length > 80,
+  });
+  return context.slice(0, 12000);
+}
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -87,57 +207,105 @@ io.on("connection", (socket) => {
   // Variable para almacenar info del usuario actual
   let currentUser: any = null;
 
-  // New project-based collaboration with presence tracking
-  socket.on("join-project", async ({ userId, projectId, name, role }: any) => {
+  const getCurrentProjectAccess = async (): Promise<ProjectSocketAccess | null> => {
+    const data = socket.data || {};
+    if (typeof data.projectId !== "string" || typeof data.userId !== "string") {
+      return null;
+    }
+
+    return resolveProjectSocketAccess(
+      data.isGuest ? "guest_socket" : data.userId,
+      data.projectId,
+      data.invitationToken,
+      socket.id
+    );
+  };
+
+  const getOrCreateConversation = (projectId: string) =>
+    prisma.aiConversation.upsert({
+      where: { projectId },
+      create: { projectId },
+      update: {},
+    });
+
+  const loadChatHistory = async (projectId: string) => {
+    const conversation = await getOrCreateConversation(projectId);
+    const messages = await prisma.aiChatMessage.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return messages.reverse();
+  };
+
+  // Only project members or visitors with a valid invitation may join the room.
+  socket.on("join-project", async (payload: any = {}) => {
     try {
-      console.log(`🔌 [join-project] Payload received:`, { userId, projectId, name, role, socketId: socket.id });
+      const { userId, projectId, invitationToken } = payload;
       
-      if (!userId || !projectId) {
-        console.error(`❌ [join-project] Missing required fields:`, { userId, projectId });
+      if (typeof userId !== "string" || typeof projectId !== "string") {
+        console.error(`❌ [join-project] Missing required fields:`, { socketId: socket.id });
         return socket.emit("error", { message: "Missing userId or projectId" });
+      }
+
+      const access = await resolveProjectSocketAccess(
+        userId,
+        projectId,
+        typeof invitationToken === "string" ? invitationToken : undefined,
+        socket.id
+      );
+
+      if (!access) {
+        console.warn(`⛔ [join-project] Access denied for user ${userId} in project ${projectId}`);
+        return socket.emit("error", { message: "You are not authorized to join this project" });
+      }
+
+      if (currentUser && currentUser.projectId !== projectId) {
+        const previousProjectId = currentUser.projectId;
+        // @ts-ignore
+        const previousUsers = (io.presence.get(previousProjectId) || [])
+          .filter((u: any) => u.socketId !== socket.id);
+        // @ts-ignore
+        io.presence.set(previousProjectId, previousUsers);
+        io.to(previousProjectId).emit("presence-update", previousUsers);
+        socket.leave(previousProjectId);
+        currentUser = null;
       }
 
       // Verificar si el socket ya está en el room para evitar re-join múltiple
       const rooms = Array.from(socket.rooms);
       if (rooms.includes(projectId)) {
+        socket.data = {
+          ...socket.data,
+          userId: access.userId,
+          projectId,
+          role: access.role,
+          name: access.name,
+          isGuest: access.isGuest,
+          invitationToken: access.isGuest ? invitationToken : undefined,
+        };
+        currentUser = { ...currentUser, ...access, projectId, socketId: socket.id };
         console.warn(`⚠️ [join-project] Socket already in room ${projectId}, skipping re-join`);
+        socket.emit("project-joined", { projectId, role: access.role });
         return;
       }
 
+      socket.data = {
+        userId: access.userId,
+        projectId,
+        role: access.role,
+        name: access.name,
+        isGuest: access.isGuest,
+        invitationToken: access.isGuest ? invitationToken : undefined,
+      };
       socket.join(projectId);
-      console.log(`✅ [join-project] User ${userId} joined project ${projectId}`);
-
-      // Ensure user exists (solo si no es guest)
-      if (!userId.startsWith("guest_")) {
-        await ensureUserExists(userId);
-      }
-
-      // Obtener proyecto y rol desde DB
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        include: { users: { include: { user: true } } },
-      });
-
-      if (!project) {
-        console.error(`❌ [join-project] Project not found:`, projectId);
-        return socket.emit("error", { message: "Project not found" });
-      }
-
-      const membership = project.users.find((u: any) => u.userId === userId);
-      const effectiveRole = membership?.role || "VIEWER";
-      const userName = name || membership?.user?.name || "Invitado";
-
-      console.log(`👤 [join-project] User role:`, { userId, effectiveRole, membershipFound: !!membership });
-
-      // Store user context in socket
-      socket.data = { userId, projectId, role: effectiveRole, name: userName };
-      console.log(`💾 [join-project] Socket data stored:`, socket.data);
+      console.log(`✅ [join-project] ${access.userId} joined project ${projectId} as ${access.role}`);
       
       // Crear entrada de presencia
       currentUser = { 
-        userId, 
-        name: userName, 
-        role: effectiveRole, 
+        userId: access.userId, 
+        name: access.name, 
+        role: access.role, 
         projectId, 
         socketId: socket.id,
         connectedAt: new Date().toISOString(),
@@ -147,7 +315,7 @@ io.on("connection", (socket) => {
       // @ts-ignore
       const projectUsers = io.presence.get(projectId) || [];
       // Remover entrada anterior del mismo userId (si reconectó)
-      const filteredUsers = projectUsers.filter((u: any) => u.userId !== userId);
+      const filteredUsers = projectUsers.filter((u: any) => u.userId !== access.userId);
       // @ts-ignore
       io.presence.set(projectId, [...filteredUsers, currentUser]);
 
@@ -157,19 +325,126 @@ io.on("connection", (socket) => {
       io.to(projectId).emit("presence-update", onlineUsers);
       
       console.log(`📡 [join-project] Broadcasting presence: ${onlineUsers.length} user(s) online in ${projectId}`);
+      socket.emit("project-joined", { projectId, role: access.role });
     } catch (err) {
-      console.error(`🚨 [join-project] Error:`, err);
+      console.error(`🚨 [join-project] Error:`, err instanceof Error ? err.message : "Unknown error");
       socket.emit("error", { message: "Failed to join project" });
     }
   });
 
-  // Ping para mantener presencia activa
-  socket.on("ping-diagram", ({ projectId, userId }: any) => {
+  socket.on("ai-chat-history-request", async () => {
     try {
+      const access = await getCurrentProjectAccess();
+      if (!access) {
+        return socket.emit("ai-chat-error", { message: "Join an authorized project before opening its AI chat" });
+      }
+
+      const history = await loadChatHistory(socket.data.projectId);
+      socket.emit("ai-chat-history", { projectId: socket.data.projectId, messages: history });
+    } catch (err) {
+      console.error("[ai-chat] Failed to load history:", err instanceof Error ? err.message : "Unknown error");
+      socket.emit("ai-chat-error", { message: "No se pudo cargar la conversación del equipo." });
+    }
+  });
+
+  socket.on("ai-chat-send", async (payload: any = {}) => {
+    const requestId = typeof payload.requestId === "string" && payload.requestId.length <= 100
+      ? payload.requestId
+      : undefined;
+
+    try {
+      const access = await getCurrentProjectAccess();
+      const message = typeof payload.message === "string" ? payload.message.trim() : "";
+
+      if (!access) {
+        return socket.emit("ai-chat-error", { requestId, message: "No tienes acceso a este proyecto." });
+      }
+      if (!message || message.length > 2000) {
+        return socket.emit("ai-chat-error", {
+          requestId,
+          message: "La pregunta debe tener entre 1 y 2000 caracteres.",
+        });
+      }
+      if (!process.env.OPENAI_API_KEY) {
+        return socket.emit("ai-chat-error", {
+          requestId,
+          message: "El moderador de IA no está configurado en el servidor.",
+        });
+      }
+
+      const projectId = socket.data.projectId as string;
+      const conversation = await getOrCreateConversation(projectId);
+      const previousMessages = await prisma.aiChatMessage.findMany({
+        where: { conversationId: conversation.id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      const history = previousMessages.reverse().map((item) => ({
+        kind: item.kind,
+        authorName: item.authorName,
+        content: item.content,
+      }));
+
+      const userMessage = await prisma.aiChatMessage.create({
+        data: {
+          conversationId: conversation.id,
+          kind: "USER",
+          authorId: access.userId,
+          authorName: access.name,
+          content: message,
+          requestId,
+        },
+      });
+
+      io.to(projectId).emit("ai-chat-message", userMessage);
+
+      const diagram = await prisma.diagram.findFirst({
+        where: { projectId },
+        select: { data: true },
+      });
+      const answer = await answerProjectQuestion(
+        message,
+        access.name,
+        getDiagramContext(diagram?.data),
+        history
+      );
+
+      const currentAccess = await getCurrentProjectAccess();
+      if (!currentAccess) {
+        return socket.emit("ai-chat-error", {
+          requestId,
+          message: "Se perdió el acceso al proyecto antes de completar la respuesta.",
+        });
+      }
+
+      const assistantMessage = await prisma.aiChatMessage.create({
+        data: {
+          conversationId: conversation.id,
+          kind: "ASSISTANT",
+          authorName: "Moderador IA",
+          content: answer,
+          requestId,
+        },
+      });
+      io.to(projectId).emit("ai-chat-message", assistantMessage);
+    } catch (err) {
+      console.error("[ai-chat] Failed to answer:", err instanceof Error ? err.message : "Unknown error");
+      socket.emit("ai-chat-error", {
+        requestId,
+        message: "No se pudo generar la respuesta. Revisa la configuración del servicio de IA e inténtalo otra vez.",
+      });
+    }
+  });
+
+  // Ping para mantener presencia activa
+  socket.on("ping-diagram", () => {
+    try {
+      if (!currentUser) return;
+      const { projectId, userId, socketId } = currentUser;
       // @ts-ignore
       const users = io.presence?.get(projectId) || [];
       const updatedUsers = users.map((u: any) => 
-        u.userId === userId ? { ...u, lastPing: Date.now() } : u
+        u.socketId === socketId ? { ...u, lastPing: Date.now() } : u
       );
       // @ts-ignore
       io.presence.set(projectId, updatedUsers);
@@ -180,16 +455,20 @@ io.on("connection", (socket) => {
   });
 
   // Salir del proyecto manualmente (antes de desconexión)
-  socket.on("leave-project", ({ projectId, userId }: any) => {
+  socket.on("leave-project", () => {
     try {
+      if (!currentUser) return;
+      const { projectId, socketId, name } = currentUser;
       // @ts-ignore
       const users = io.presence?.get(projectId) || [];
-      const filteredUsers = users.filter((u: any) => u.userId !== userId);
+      const filteredUsers = users.filter((u: any) => u.socketId !== socketId);
       // @ts-ignore
       io.presence.set(projectId, filteredUsers);
       io.to(projectId).emit("presence-update", filteredUsers);
       socket.leave(projectId);
-      console.log(`🚪 [leave-project] User ${userId} left project ${projectId}`);
+      currentUser = null;
+      socket.data = {};
+      console.log(`🚪 [leave-project] ${name} left project ${projectId}`);
     } catch (err) {
       console.error(`❌ [leave-project] Error:`, err);
     }
@@ -198,9 +477,9 @@ io.on("connection", (socket) => {
   // Desconexión - limpiar presencia
   socket.on("disconnect", () => {
     if (currentUser) {
-      const { projectId, userId, name } = currentUser;
+      const { projectId, socketId, name } = currentUser;
       // @ts-ignore
-      const users = (io.presence.get(projectId) || []).filter((u: any) => u.userId !== userId);
+      const users = (io.presence.get(projectId) || []).filter((u: any) => u.socketId !== socketId);
       // @ts-ignore
       io.presence.set(projectId, users);
       io.to(projectId).emit("presence-update", users);
@@ -211,7 +490,9 @@ io.on("connection", (socket) => {
   // Diagram changes with role validation and incremental updates
   socket.on("diagram-change", async ({ projectId, action, payload }) => {
     try {
-      const { userId, role } = socket.data || {};
+      const access = await getCurrentProjectAccess();
+      const { userId, role } = access || {};
+      if (access) socket.data.role = access.role;
       
       console.log(`📨 [diagram-change] RECEIVED:`, { 
         projectId, 
@@ -222,9 +503,9 @@ io.on("connection", (socket) => {
         socketData: socket.data 
       });
       
-      if (!userId || !projectId) {
-        console.error("❌ [diagram-change] Not authenticated - missing userId or projectId");
-        return socket.emit("error", { message: "Not authenticated" });
+      if (!userId || !projectId || projectId !== socket.data.projectId) {
+        console.error("❌ [diagram-change] Rejected unauthenticated or cross-project change");
+        return socket.emit("error", { message: "Not authorized for this project" });
       }
 
       if (role === "VIEWER") {

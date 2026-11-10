@@ -187,12 +187,18 @@ Herramienta integral para acelerar el desarrollo de sistemas de gestión mediant
         - Renombrado personalizado de tablas intermedias
       - Ejecución diferida de `AddField` para evitar pérdida de atributos
       - Sincronización en tiempo real vía Socket.IO
-      - Control de acceso por rol (solo OWNER/EDITOR pueden usar IA)
+      - Solo OWNER/EDITOR pueden generar y aplicar cambios al diagrama
       - Validación de respuestas JSON con manejo de errores
       - Rate limit y gestión de API key inválida
     - **System Prompt:** 180+ líneas con ejemplos detallados y reglas de inferencia
     - **Variables de entorno:** `OPENAI_API_KEY` requerida
     - **Testing:** Guía completa en `TESTING_GUIDE.md` (600+ líneas)
+  - **Chat compartido con moderador IA**
+    - OWNER, EDITOR y VIEWER consultan al moderador desde el editor; visitantes requieren una invitación válida
+    - Preguntas y respuestas se guardan por proyecto y se transmiten al equipo por Socket.IO
+    - El moderador usa el diagrama guardado y hasta 20 mensajes recientes como contexto
+    - El chat recomienda y explica; no modifica el diagrama
+    - Historial persistido en los modelos Prisma `AiConversation` y `AiChatMessage`
   - **Ejemplos de uso:**
     - "Crea una tabla cliente con id, nombre, email, teléfono"
     - "Relación 1 a muchos entre cliente y pedido"
@@ -277,6 +283,7 @@ EXAM_2_SW/
 │       └── src/
 │           ├── components/          # Componentes React
 │           │   ├── AIPromptBar.tsx  # 🧠 Barra de prompts IA (glassmorphism)
+│   │           ├── AIChatPanel.tsx  # Chat compartido con el moderador IA
 │           │   ├── ErrorBoundary.tsx # Manejo de errores
 │           │   ├── PropertiesPanel.tsx # Editor de propiedades
 │           │   ├── Sidebar.tsx      # Panel lateral
@@ -884,18 +891,20 @@ EXAM_2_SW/
 
 **`join-project`** - Usuario se conecta a proyecto
 
-- **Payload:** `{ userId, projectId, name, role }`
+- **Payload:** `{ userId, projectId, invitationToken? }`
 - **Acciones:**
-  - Verifica que userId/projectId existan
-  - Llama `socket.join(projectId)` para unir a room
-  - Crea usuario placeholder si no existe (excepto guests)
-  - Obtiene rol desde BD (o VIEWER por defecto)
-  - Guarda `socket.data = { userId, projectId, role, name }`
+  - Comprueba la membresía en BD antes de permitir `socket.join(projectId)`
+  - Deriva nombre y rol de la BD; visitantes requieren un token de invitación válido y entran como VIEWER
+  - Guarda la identidad y el proyecto autorizados en `socket.data`
   - Agrega a `io.presence` Map con timestamp
   - Emite `presence-update` a todos en el proyecto
-- **Dónde cambiar:**
-  - Validación de guests: Línea ~105 condición `userId.startsWith("guest_")`
-  - Rol por defecto: Línea ~123 `effectiveRole = "VIEWER"`
+
+**`ai-chat-history-request` / `ai-chat-send`** - Historial y preguntas al moderador
+
+- Solo funcionan después de unirse a un proyecto autorizado
+- El servidor persiste cada mensaje y transmite preguntas y respuestas a la sala del proyecto
+- Las preguntas incluyen el nombre verificado del participante y contexto del diagrama e historial reciente
+- No ejecuta acciones de edición; la generación de cambios sigue en `AIPromptBar`
 
 **`diagram-change`** - Cambio en diagrama (ADD_NODE, UPDATE_NODE, DELETE_NODE, etc.)
 
