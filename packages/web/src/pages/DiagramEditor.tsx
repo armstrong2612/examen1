@@ -29,6 +29,7 @@ import { getEdgeStyle, UML_SVG_MARKERS } from "../utils/relationStyles";
 import UmlMultiplicityEdge from "../components/edges/UmlMultiplicityEdge";
 import { getMultiplicitiesFromRelationType } from "../utils/multiplicityHelper";
 import { AIPromptBar } from "../components/AIPromptBar";
+import { AIChatPanel } from "../components/AIChatPanel";
 import { useViewMode } from "../store/ViewModeContext";
 
 function throttle<T extends (...args: any[]) => any>(func: T, delay: number): T {
@@ -253,16 +254,17 @@ export default function DiagramEditor() {
     if (!user || !project || !socket) return;
 
     console.log("🎨 Uniéndose al proyecto", project.id);
-    
-    // Enviar info completa del usuario para presencia (sin rol, el backend lo obtiene de DB)
-    socket.emit("join-project", { 
+
+    const joinProject = () => socket.emit("join-project", {
       userId: user.id, 
       projectId: project.id,
-      name: user.name
+      name: user.name,
+      invitationToken: isGuest ? inviteToken : undefined,
     });
 
     const onConnect = () => {
       setConnected(true);
+      joinProject();
     };
 
     const onDisconnect = () => {
@@ -293,6 +295,7 @@ export default function DiagramEditor() {
     socket.on("presence-update", onPresenceUpdate);
     socket.on("warning", onWarning);
     socket.on("error", onError);
+    if (socket.connected) joinProject();
 
     return () => {
       socket.off("connect", onConnect);
@@ -301,7 +304,7 @@ export default function DiagramEditor() {
       socket.off("warning", onWarning);
       socket.off("error", onError);
     };
-  }, [user, project, socket]);
+  }, [user, project, socket, isGuest, inviteToken]);
 
   useEffect(() => {
     if (!user || !project || !socket) return;
@@ -2547,6 +2550,7 @@ export default function DiagramEditor() {
           onActionsReceived={applyAIActions}
         />
       )}
+      <AIChatPanel key={project.id} socket={socket} projectId={project.id} userId={user.id} />
     </div>
   );
 }
